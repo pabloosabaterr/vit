@@ -40,19 +40,20 @@ matters (otherwise anagrams like "stop" and "pots" would collide):
 ```
 
 ### Step 2: number to polar point (angle + distance)
-The number is split into an angle and a loop count:
+The number is split into an angle and a distance from the center.:
 ```
-angle    = hash mod 360
-distance = hash / 360    (integer part, the "loops")
+angle    = (hash mod 360) x (π / 180)    (rads)
+distance = hash * scale
 ```
+scale is a user-set variable that can be set in a `.vitrc` file.
 
 Short words end up close to the center (few loops), long words
 further out (more loops). Words spread across the space by both
 direction and distance:
 ```
-"fix"       = 685   :  325°, distance 1    (close to center)
-"button"    = 2359  :  199°, distance 6    (mid range)
-"dashboard" = 5820  :  60°,  distance 16   (far from center)
+"fix"       = 685   :  5.67 rad, distance 685    (close to center)
+"button"    = 2359  :  3.47 rad, distance 2359   (mid range)
+"dashboard" = 5820  :  1.05 rad, distance 5820   (far from center)
 ```
 
 ### Step 3: polar to cartesian
