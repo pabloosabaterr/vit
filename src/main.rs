@@ -17,18 +17,26 @@ struct Context {
 	scale: f64,
 }
 
-impl Context {
+impl Default for Context {
 	fn default() -> Self {
 		Context {
 			scale: 1.0,
 		}
 	}
+}
 
-	fn load() -> Self {
-		let mut ctx = Context::default();
-		let Ok(content) = std::fs::read_to_string(".vitrc") else {
-			return ctx;
-		};
+impl Context {
+	fn update(&mut self, key: &str, value: &str) -> bool {
+		match key {
+			"scale" => self.scale = value.parse().unwrap_or(self.scale),
+			_ => return false,
+		}
+		true
+	}
+
+	fn try_load() -> Result<Self, Box<dyn std::error::Error>> {
+		let content = std::fs::read_to_string(".vitrc")?;
+		let mut ctx = Self::default();
 
 		for line in content.lines() {
 			let line = line.trim();
@@ -36,17 +44,15 @@ impl Context {
 				continue;
 			}
 
-			let Some((key, value)) = line.split_once('=') else {
-				continue;
+			if let Some((key, value)) = line.split_once('=') {
+				ctx.update(key.trim(), value.trim());
 			};
-
-			match key.trim() {
-				"scale" => ctx.scale = value.trim().parse()
-							    .unwrap_or(ctx.scale),
-				_ => {},
-			}
 		}
-		ctx
+		Ok(ctx)
+	}
+
+	fn load() -> Self {
+		Self::try_load().unwrap_or_default()
 	}
 }
 
