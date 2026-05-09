@@ -73,32 +73,32 @@ Each word has a weight that decays by position. The first word
 dominates, later words refine:
 
 ```
-weight(i) = 1 / (1 + k × i)
+weight(i) = 1 / (1 + decay × i)^2
 ```
 
-Where i is the 0-indexed word position and k is a
+Where i is the 0-indexed word position and decay is a
 user-configurable decay factor:
 
 ```
-k=0  :  all words equal        (1.00, 1.00, 1.00, 1.00)
-k=1  :  smooth decay           (1.00, 0.50, 0.33, 0.25)  [default]
-k=3  :  aggressive decay       (1.00, 0.25, 0.14, 0.10)
-k=10 :  almost first-word only (1.00, 0.09, 0.05, 0.03)
+decay=0  :  all words equal        (1.00, 1.00, 1.00, 1.00)
+decay=1  :  smooth decay           (1.00, 0.25, 0.11, 0.06)  [default]
+decay=3  :  aggressive decay       (1.00, 0.06, 0.02, 0.01)
+decay=10 :  almost first-word only (1.00, 0.01, 0.00, 0.00)
 ```
 
 The weight never reaches zero. Every word contributes.
-Example with k=1:
+Example with decay=1:
 
 ```
 commit: "fix button login"
 
-word       point (X, Y)     weight
+word        point (X, Y)    weight
 "fix"      (-0.82, -0.57)   1.00
-"button"   (-5.51, -2.25)   0.50
-"login"    (2.85, 4.40)     0.33
+"button"   (-5.51, -2.25)   0.25
+"login"    (2.85, 4.40)     0.11
 
-center X = (-0.82×1.00 + -5.51×0.50 + 2.85×0.33) / (1.00 + 0.50 + 0.33)
-center Y = (-0.57×1.00 + -2.25×0.50 + 4.40×0.33) / (1.00 + 0.50 + 0.33)
+center X = (-0.82×1.00 + -5.51×0.25 + 2.85×0.11) / (1.00 + 0.25 + 0.11)
+center Y = (-0.57×1.00 + -2.25×0.25 + 4.40×0.11) / (1.00 + 0.25 + 0.11)
 ```
 
 Why does this create clusters?
