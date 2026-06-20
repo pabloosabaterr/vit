@@ -32,10 +32,14 @@ impl PolarInfo {
 /*
  * Each character is multiplied by its position to avoid anagrams from having
  * the same hash.
+ *
+ * FNV-1a hash 64 bit
  */
 pub fn word_to_number(word: &str) -> u64 {
-    word.chars()
-        .enumerate()
-        .map(|(i, c)| (c as u64) * (i as u64 + 1))
-        .sum()
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in word.bytes() {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
 }
