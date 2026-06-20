@@ -17,3 +17,13 @@ pub fn map(ctx: &Context) {
         );
     }
 }
+
+pub fn help() {
+   eprintln!(
+        "usage: vit <command>\n\
+         \n\
+         commands:\n\
+         \x20 map            show all commits with coordinates\n\
+         \x20 help           show this help"
+    );
+}

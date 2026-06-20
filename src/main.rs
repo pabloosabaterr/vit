@@ -14,9 +14,10 @@ fn main() {
 
     match args.first().map(|s| s.as_str()) {
         Some("map") => cmd::map(&ctx),
+        Some("help") | Some("--help") | Some("-h") => cmd::help(),
         Some(other) => {
             eprintln!("unknown command: {}", other);
         }
-        None => eprintln!("usage: vit <command>")
+        None => cmd::help()
     }
 }
