@@ -1,3 +1,4 @@
+mod cmd;
 mod config;
 mod git;
 mod hash;
@@ -6,23 +7,16 @@ mod text;
 mod vector;
 
 use config::Context;
-use vector::VectorInfo;
 
 fn main() {
     let ctx = Context::load();
-    let commits = git::read_commits(".");
+    let args: Vec<String> = std::env::args().skip(1).collect();
 
-    if commits.is_empty() {
-        eprintln!("no commits found");
-        return;
-    }
-
-    for c in &commits {
-        let clean = text::preprocess(&c.message);
-        let info = VectorInfo::from_message(&clean, &ctx);
-        println!(
-            "{:.7}  ({:>10.2}, {:>10.2})  {}",
-            &c.hash[..7], info.x, info.y, c.message
-        );
+    match args.first().map(|s| s.as_str()) {
+        Some("map") => cmd::map(&ctx),
+        Some(other) => {
+            eprintln!("unknown command: {}", other);
+        }
+        None => eprintln!("usage: vit <command>")
     }
 }
