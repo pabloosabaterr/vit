@@ -13,14 +13,20 @@ pub struct PolarInfo {
 }
 
 impl PolarInfo {
-    pub fn from_number(num: u64, ctx: &Context) -> Self {
+    /*
+     * Maps a character to a polar point based on its position
+     * in the alphabet. Each letter gets an equal slice of 360°.
+     *
+     *   'a' =   0.0°
+     *   'b' =  13.8°
+     *   'z' = 346.2°
+     */
+    pub fn char_to_polar(c: char, ctx: &Context) -> Self {
         PolarInfo {
-            angle: ((num % 360) as f64).to_radians(),
-            /*
-             * Compresses the distances to avoid big words shadowing
-             * smaller ones even if they have bigger weights.
-             */
-            dist: (num as f64).ln() * SCALE_DEF * ctx.scale,
+            angle: ((c as u8 - b'a') as f64
+                * (360.0 / 26.0))
+                .to_radians(),
+            dist: SCALE_DEF * ctx.scale,
         }
     }
 
@@ -29,17 +35,29 @@ impl PolarInfo {
     }
 }
 
-/*
- * Each character is multiplied by its position to avoid anagrams from having
- * the same hash.
- *
- * FNV-1a hash 64 bit
- */
-pub fn word_to_number(word: &str) -> u64 {
-    let mut hash: u64 = 0xcbf29ce484222325;
-    for byte in word.bytes() {
-        hash ^= byte as u64;
-        hash = hash.wrapping_mul(0x100000001b3);
+pub struct PointInfo {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl PointInfo {
+    /*
+     * Different from message vectorization, words get their char
+     * vectors concatenated with a decaying weight, making first
+     * chars more relevant to get the most of the lexeme while
+     * the rest tweaks the final position.
+     */
+    pub fn from_word(word: &str, ctx: &Context) -> Self {
+        let mut x = 0.0;
+        let mut y = 0.0;
+        for (i, c) in word.chars().enumerate() {
+            let weight =
+                1.0 / (1.0 + ctx.char_decay * i as f64).powi(2);
+            let (dx, dy) =
+                PolarInfo::char_to_polar(c, ctx).to_cartesian();
+            x += dx * weight;
+            y += dy * weight;
+        }
+        PointInfo { x, y }
     }
-    hash
 }

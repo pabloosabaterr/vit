@@ -56,7 +56,7 @@ fn resolve_synonym(word: &str, synonyms: &HashMap<String, String>) -> String {
 fn strip_punctuation(word: &str) -> String {
     word.chars()
         .map(|c| if c == '-' { ' ' } else { c })
-        .filter(|c| c.is_alphanumeric() || *c == ' ')
+        .filter(|&c| c.is_alphabetic() || c == ' ')
         .collect()
 }
 

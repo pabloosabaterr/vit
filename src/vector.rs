@@ -1,5 +1,5 @@
 use crate::config::Context;
-use crate::hash::{PolarInfo, word_to_number};
+use crate::hash::PointInfo;
 
 pub struct VectorInfo {
     pub x: f64,
@@ -9,12 +9,6 @@ pub struct VectorInfo {
 }
 
 impl VectorInfo {
-    pub fn from_word(word: &str, ctx: &Context) -> Self {
-        let (x, y) =
-            PolarInfo::from_number(word_to_number(word), ctx).to_cartesian();
-        VectorInfo { x, y, z: 0 }
-    }
-
     /*
      * Calculates the center of the vector words of a message.
      * Each word has a decaying weight making first words to influence more
@@ -29,6 +23,10 @@ impl VectorInfo {
     pub fn from_message(message: &str, ctx: &Context) -> Self {
         let mut x = 0.0;
         let mut y = 0.0;
+        /*
+         * Accumulated weight to normalize the final coords, making the
+         * length of a message less relevant to the final position.
+         */
         let mut weight = 0.0;
 
         for (i, word) in message.split_whitespace().enumerate() {
@@ -41,13 +39,15 @@ impl VectorInfo {
              * Users can set a decay factor to change the decay
              * aggressiveness.
              */
-            let w = 1.0 / (1.0 + ctx.decay * i as f64).powi(2);
-            let v = VectorInfo::from_word(word, ctx);
-            x += v.x * w;
-            y += v.y * w;
+            let w =
+                1.0 / (1.0 + ctx.word_decay * i as f64).powi(2);
+            let p = PointInfo::from_word(word, ctx);
+            x += p.x * w;
+            y += p.y * w;
             weight += w;
         }
 
+        /* Message vector is the center of mass */
         VectorInfo {
             x: x / weight,
             y: y / weight,
