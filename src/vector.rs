@@ -47,6 +47,10 @@ impl VectorInfo {
             weight += w;
         }
 
+        if weight == 0.0 {
+            return VectorInfo { x: 0.0, y: 0.0, z: 0 };
+        }
+
         /* Message vector is the center of mass */
         VectorInfo {
             x: x / weight,

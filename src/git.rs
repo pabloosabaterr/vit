@@ -26,15 +26,18 @@ pub struct Commit {
  *
  * Returns commits in reverse chronological order (newest first).
  */
-pub fn read_commits(path: &str) -> Vec<Commit> {
-    let output = Command::new("git")
-        .arg("-C")
+pub fn read_commits(path: &str, limit: Option<usize>) -> Vec<Commit> {
+    let mut cmd = Command::new("git");
+    cmd.arg("-C")
         .arg(path)
         .arg("log")
-        .arg("--format=%H%x00%at%x00%s")
-        .output();
+        .arg("--format=%H%x00%at%x00%s");
 
-    let output = match output {
+    if let Some(n) = limit {
+        cmd.arg(format!("-{}", n));
+    }
+
+    let output = match cmd.output() {
         Ok(o) if o.status.success() => o,
         _ => return Vec::new(),
     };

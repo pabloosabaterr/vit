@@ -20,6 +20,9 @@ impl PolarInfo {
      *   'a' =   0.0°
      *   'b' =  13.8°
      *   'z' = 346.2°
+     *
+     * TODO: alphabet order needs tweaks now words like git and hash land almost
+     * together
      */
     pub fn char_to_polar(c: char, ctx: &Context) -> Self {
         PolarInfo {
