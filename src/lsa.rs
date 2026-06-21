@@ -13,6 +13,7 @@
  */
 
 use std::collections::{HashMap, HashSet};
+use std::io::Result;
 
 use crate::lin_alg::power_iteration;
 use crate::sparse_matrix::SparseMatrix;
@@ -135,6 +136,39 @@ pub struct LsaStats {
     pub sigma_last: f64,
 }
 
+impl LsaStats {
+    pub fn save(&self) -> Result<()> {
+        std::fs::create_dir_all(".vit")?;
+        let content = [
+            format!("word_count={}", self.word_count),
+            format!("commit_count={}", self.commit_count),
+            format!("dimensions={}", self.dimensions),
+            format!("sigma_first={}", self.sigma_first),
+            format!("sigma_last={}", self.sigma_last),
+        ]
+        .join("\n");
+        std::fs::write(".vit/stats", content)
+    }
+
+    pub fn load() -> std::io::Result<Self> {
+        let content = std::fs::read_to_string(".vit/stats")?;
+        let mut stats = LsaStats::default();
+        for line in content.lines() {
+            if let Some((key, val)) = line.split_once('=') {
+                match key {
+                    "word_count" => stats.word_count = val.parse().unwrap_or(0),
+                    "commit_count" => stats.commit_count = val.parse().unwrap_or(0),
+                    "dimensions" => stats.dimensions = val.parse().unwrap_or(0),
+                    "sigma_first" => stats.sigma_first = val.parse().unwrap_or(0.0),
+                    "sigma_last" => stats.sigma_last = val.parse().unwrap_or(0.0),
+                    _ => {}
+                }
+            }
+        }
+        Ok(stats)
+    }
+}
+
 pub fn build(messages: &[String], dims: usize, scale: f64) -> (WordMap, LsaStats) {
     if messages.len() < 2 {
         return (WordMap::from_raw(HashMap::new(), dims), LsaStats::default());
@@ -183,5 +217,5 @@ pub fn build(messages: &[String], dims: usize, scale: f64) -> (WordMap, LsaStats
         coords.insert(word.clone(), scaled);
     }
 
-    (WordMap::from_raw(coords, dims), stats)
+    (WordMap::from_raw(coords, real_dimensions), stats)
 }

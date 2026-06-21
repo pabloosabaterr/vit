@@ -58,13 +58,16 @@ pub fn map(ctx: &Context, args: &[String]) {
         })
         .collect();
 
-    if let Err(e) = wordmap.save() {
-        eprintln!("failed to save wordmap: {}", e);
+    if let Err(_) = wordmap.save() {
+        eprintln!("failed to save wordmap");
         return;
     }
-    if let Err(e) = save_commits(&entries, wordmap.dims()) {
-        eprintln!("failed to save commits: {}", e);
+    if let Err(_) = save_commits(&entries, wordmap.dims()) {
+        eprintln!("failed to save commits");
         return;
+    }
+    if let Err(_) = stats.save() {
+        eprintln!("failed to save stats")
     }
 
     if list {

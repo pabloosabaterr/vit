@@ -91,12 +91,13 @@ pub fn near(ctx: &Context, args: &[String]) {
             .collect();
         wm.save().ok();
         save_commits(&entries, wm.dims()).ok();
+        stats.save().ok();
         (wm, entries, stats)
     } else {
-        match (WordMap::load(), load_commits()) {
-            (Ok(wm), Ok(entries)) => {
+        match (WordMap::load(), load_commits(), LsaStats::load()) {
+            (Ok(wm), Ok(entries), Ok(stats)) => {
                 verbose!(verbose, "  loaded from .vit/\n");
-                (wm, entries, LsaStats::default())
+                (wm, entries, stats)
             }
             _ => {
                 eprintln!("no index found, run 'vit map' first");
