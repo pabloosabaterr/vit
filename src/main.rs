@@ -10,6 +10,9 @@ fn main() {
         Some("map") => cmd::map(&ctx, &args[1..]),
         Some("help") | Some("--help") | Some("-h") => cmd::help(&args[1..]),
         Some("near") => cmd::near(&ctx, &args[1..]),
+        Some("--version") | Some("-V") => {
+            println!("vit {}", env!("CARGO_PKG_VERSION"));
+        }
         Some(other) => {
             eprintln!("unknown command: {}", other);
         }

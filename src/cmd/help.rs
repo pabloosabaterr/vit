@@ -25,7 +25,8 @@ correlation search for git commits.
 commands:
   map              build word map from commits
   near <message>   find commits closest to a message
-  help [command]   show help for a command";
+  help [command]   show help for a command
+  -V, --version    vit's version";
 
 pub fn help(args: &[String]) {
     let text = match args.first().map(|s| s.as_str()) {
