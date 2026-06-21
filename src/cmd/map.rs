@@ -1,9 +1,12 @@
-use crate::cmd::Instant;
-
 use super::build_index;
-use crate::Context;
-use crate::git;
-use crate::verbose;
+use std::time::Instant;
+use vit::commit::CommitEntry;
+use vit::commit::save_commits;
+use vit::config::Context;
+use vit::git;
+use vit::text;
+use vit::vector::VectorInfo;
+use vit::verbose;
 
 #[derive(Default)]
 struct MapFlags {
@@ -42,12 +45,26 @@ pub fn map(ctx: &Context, args: &[String]) {
         return;
     }
 
-    match wordmap.save() {
-        Ok(_) => {}
-        Err(_) => {
-            eprintln!("failed to save the index");
-            return;
-        }
+    let entries: Vec<CommitEntry> = commits
+        .iter()
+        .map(|c| {
+            let clean = text::preprocess(&c.message);
+            let info = VectorInfo::from_message(&clean, &wordmap);
+            CommitEntry {
+                hash: c.hash.clone(),
+                message: c.message.clone(),
+                position: info.to_vec(),
+            }
+        })
+        .collect();
+
+    if let Err(e) = wordmap.save() {
+        eprintln!("failed to save wordmap: {}", e);
+        return;
+    }
+    if let Err(e) = save_commits(&entries, wordmap.dims()) {
+        eprintln!("failed to save commits: {}", e);
+        return;
     }
 
     if list {

@@ -55,6 +55,19 @@ impl VectorInfo {
             .sqrt()
     }
 
+    pub fn to_vec(&self) -> Vec<f64> {
+        self.coords.clone()
+    }
+
+    pub fn dist_vec(&self, other: &[f64]) -> f64 {
+        self.coords
+            .iter()
+            .zip(other.iter())
+            .map(|(a, b)| (a - b).powi(2))
+            .sum::<f64>()
+            .sqrt()
+    }
+
     /*
      * Alternative, I need to test this.
      */

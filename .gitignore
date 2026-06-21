@@ -3,3 +3,5 @@
 # vit configuration file
 .vitrc
 .vit/
+
+.bench*

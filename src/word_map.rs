@@ -52,11 +52,11 @@ impl WordMap {
             }
         }
 
-        fs::write(".vit/index", buf)
+        fs::write(".vit/wordmap", buf)
     }
 
     pub fn load() -> Result<WordMap> {
-        let buf = fs::read(".vit/index")?;
+        let buf = fs::read(".vit/wordmap")?;
         let mut pos = 0;
 
         let dims =

@@ -1,13 +1,14 @@
 use super::build_index;
 
-use crate::Context;
-use crate::cmd::Instant;
-use crate::git;
-use crate::lsa::LsaStats;
-use crate::text;
-use crate::vector::VectorInfo;
-use crate::verbose;
-use crate::word_map::WordMap;
+use std::time::Instant;
+use vit::commit::{CommitEntry, load_commits, save_commits};
+use vit::config::Context;
+use vit::git;
+use vit::lsa::LsaStats;
+use vit::text;
+use vit::vector::VectorInfo;
+use vit::verbose;
+use vit::word_map::WordMap;
 
 #[derive(Default)]
 struct NearFlags {
@@ -68,29 +69,41 @@ pub fn near(ctx: &Context, args: &[String]) {
     };
     let NearFlags { verbose, map } = query.flags;
 
-    let t_git = Instant::now();
-    let commits = git::read_commits(".", None);
-    if commits.is_empty() {
-        eprintln!("no commits found");
-        return;
-    }
-
     let t_build = Instant::now();
-    let (wordmap, stats) = if map {
-        build_index(&commits, ctx)
+    let (wordmap, entries, stats) = if map {
+        let commits = git::read_commits(".", None);
+        if commits.is_empty() {
+            eprintln!("no commits found");
+            return;
+        }
+        let (wm, stats) = build_index(&commits, ctx);
+        let entries: Vec<CommitEntry> = commits
+            .iter()
+            .map(|c| {
+                let clean = text::preprocess(&c.message);
+                let info = VectorInfo::from_message(&clean, &wm);
+                CommitEntry {
+                    hash: c.hash.clone(),
+                    message: c.message.clone(),
+                    position: info.to_vec(),
+                }
+            })
+            .collect();
+        wm.save().ok();
+        save_commits(&entries, wm.dims()).ok();
+        (wm, entries, stats)
     } else {
-        match WordMap::load() {
-            Ok(wm) => {
-                verbose!(verbose, "  loaded index from .vit/index\n");
-                (wm, LsaStats::default())
+        match (WordMap::load(), load_commits()) {
+            (Ok(wm), Ok(entries)) => {
+                verbose!(verbose, "  loaded from .vit/\n");
+                (wm, entries, LsaStats::default())
             }
-            Err(_) => {
-                verbose!(verbose, "  no index found, building...\n");
-                build_index(&commits, ctx)
+            _ => {
+                eprintln!("no index found, run 'vit map' first");
+                return;
             }
         }
     };
-
     let build_time = t_build.elapsed();
 
     if wordmap.is_empty() {
@@ -101,16 +114,13 @@ pub fn near(ctx: &Context, args: &[String]) {
     let t_search = Instant::now();
     let clean_query = text::preprocess(&query.text);
     let target = VectorInfo::from_message(&clean_query, &wordmap);
-    let mut ranked: Vec<_> = commits
+    let mut ranked: Vec<_> = entries
         .iter()
         .map(|c| {
-            let clean = text::preprocess(&c.message);
-            let info = VectorInfo::from_message(&clean, &wordmap);
-            let dist = target.dist(&info);
+            let dist = target.dist_vec(&c.position);
             (c, dist)
         })
         .collect();
-
     ranked.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     let search_time = t_search.elapsed();
 
@@ -118,7 +128,6 @@ pub fn near(ctx: &Context, args: &[String]) {
     for (c, dist) in &ranked[..count] {
         println!("  {:.7}  {:>5.2}  {}", &c.hash[..7], dist, c.message);
     }
-
     verbose!(verbose, "");
     verbose!(
         verbose,
@@ -140,8 +149,7 @@ pub fn near(ctx: &Context, args: &[String]) {
         stats.sigma_first,
         stats.sigma_last
     );
-    verbose!(verbose, "  git log     {:.2?}", t_git.elapsed());
-    verbose!(verbose, "  lsa build   {:.2?}", build_time);
+    verbose!(verbose, "  build       {:.2?}", build_time);
     verbose!(verbose, "  search      {:.2?}", search_time);
     verbose!(verbose, "");
 }

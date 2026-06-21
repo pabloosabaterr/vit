@@ -1,15 +1,6 @@
 mod cmd;
-mod config;
-mod git;
-mod lin_alg;
-mod lsa;
-mod sparse_matrix;
-mod stemmer;
-mod text;
-mod vector;
-mod word_map;
 
-use config::Context;
+use vit::config::Context;
 
 fn main() {
     let ctx = Context::load();
