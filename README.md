@@ -48,6 +48,10 @@ cargo build --release
 > You do want to use the release build even while testing or developing or
 > else it will take several x times more to run.
 
+You can find docs about how to contribute and ideas of what at:
+
+[CONTRIBUTING](./CONTRIBUTING.md)
+
 ## Example
 
 ```
