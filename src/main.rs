@@ -16,11 +16,11 @@ fn main() {
 
     match args.first().map(|s| s.as_str()) {
         Some("map") => cmd::map(&ctx, &args[1..]),
-        Some("help") | Some("--help") | Some("-h") => cmd::help(),
+        Some("help") | Some("--help") | Some("-h") => cmd::help(&args[1..]),
         Some("near") => cmd::near(&ctx, &args[1..]),
         Some(other) => {
             eprintln!("unknown command: {}", other);
         }
-        None => cmd::help(),
+        None => cmd::help(&args[1..]),
     }
 }

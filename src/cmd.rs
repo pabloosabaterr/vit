@@ -91,18 +91,39 @@ pub fn map(ctx: &Context, args: &[String]) {
     );
 }
 
-pub fn help() {
-    eprintln!(
-        "usage: vit <command>\n\
-         \n\
-         commands:\n\
-         \x20 map            \
-         show all commits with coordinates\n\
-         \x20 near <message> \
-         find commits closest to a message\n\
-         \x20 help           \
-         show this help"
-    );
+const MAP_HELP: &str = "\
+usage: vit map [options]
+
+Build word map from commits.
+
+options:
+  -v, --verbose    show timing and debug info
+  -l, --list       list all commits";
+
+const NEAR_HELP: &str = "\
+usage: vit near <message> [options]
+
+Find commits closest to a message.
+
+options:
+  -v, --verbose    show timing and debug info
+  -N               limit results (default: 10)";
+
+const GENERAL_HELP: &str = "\
+usage: vit <command>
+
+commands:
+  map              build word map from commits
+  near <message>   find commits closest to a message
+  help [command]   show help for a command";
+
+pub fn help(args: &[String]) {
+    let text = match args.first().map(|s| s.as_str()) {
+        Some("map") => MAP_HELP,
+        Some("near") => NEAR_HELP,
+        _ => GENERAL_HELP,
+    };
+    eprintln!("{}", text);
 }
 
 #[derive(Default)]
