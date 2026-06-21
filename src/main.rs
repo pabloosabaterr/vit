@@ -7,6 +7,7 @@ mod sparse_matrix;
 mod stemmer;
 mod text;
 mod vector;
+mod word_map;
 
 use config::Context;
 

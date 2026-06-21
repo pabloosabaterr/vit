@@ -1,4 +1,4 @@
-use crate::lsa::WordMap;
+use crate::word_map::WordMap;
 
 pub struct VectorInfo {
     pub coords: Vec<f64>,

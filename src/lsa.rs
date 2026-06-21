@@ -16,6 +16,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::lin_alg::power_iteration;
 use crate::sparse_matrix::SparseMatrix;
+use crate::word_map::WordMap;
 
 pub const DEFAULT_DIMS: usize = 32;
 
@@ -125,32 +126,6 @@ fn build_tfidf(
     SparseMatrix::from_triplets(word_nr, doc_nr, &mut triplets)
 }
 
-/*
- * N-dimensional word embeddings derived from LSA.
- *
- * Each word that appears in the commit corpus gets a position in k-dimensional
- * space based on its co-occurrence pattern. Words used in similar commits land
- * near each other.
- */
-pub struct WordMap {
-    coords: HashMap<String, Vec<f64>>,
-    dims: usize,
-}
-
-impl WordMap {
-    pub fn get(&self, word: &str) -> Option<&Vec<f64>> {
-        self.coords.get(word)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.coords.is_empty()
-    }
-
-    pub fn dims(&self) -> usize {
-        self.dims
-    }
-}
-
 #[derive(Default)]
 pub struct LsaStats {
     pub word_count: usize,
@@ -162,26 +137,14 @@ pub struct LsaStats {
 
 pub fn build(messages: &[String], dims: usize, scale: f64) -> (WordMap, LsaStats) {
     if messages.len() < 2 {
-        return (
-            WordMap {
-                coords: HashMap::new(),
-                dims,
-            },
-            LsaStats::default(),
-        );
+        return (WordMap::from_raw(HashMap::new(), dims), LsaStats::default());
     }
 
     let (vocab, words, word_freq) = build_vocab(messages);
     let word_nr = vocab.len();
 
     if word_nr < 2 {
-        return (
-            WordMap {
-                coords: HashMap::new(),
-                dims,
-            },
-            LsaStats::default(),
-        );
+        return (WordMap::from_raw(HashMap::new(), dims), LsaStats::default());
     }
 
     let importance_matrix = build_tfidf(messages, &words, word_nr, &word_freq);
@@ -220,12 +183,5 @@ pub fn build(messages: &[String], dims: usize, scale: f64) -> (WordMap, LsaStats
         coords.insert(word.clone(), scaled);
     }
 
-    (
-        WordMap {
-            coords,
-            dims: real_dimensions,
-        },
-        stats,
-    )
+    (WordMap::from_raw(coords, dims), stats)
 }
-

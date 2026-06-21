@@ -1,11 +1,13 @@
 use super::build_index;
 
-use crate::vector::VectorInfo;
-use crate::text;
-use crate::git;
-use crate::cmd::Instant;
 use crate::Context;
+use crate::cmd::Instant;
+use crate::git;
+use crate::lsa::LsaStats;
+use crate::text;
+use crate::vector::VectorInfo;
 use crate::verbose;
+use crate::word_map::WordMap;
 
 #[derive(Default)]
 struct NearFlags {
@@ -72,7 +74,17 @@ pub fn near(ctx: &Context, args: &[String]) {
     }
 
     let t_build = Instant::now();
-    let (wordmap, stats) = build_index(&commits, ctx);
+    let (wordmap, stats) = match WordMap::load() {
+        Ok(wm) => {
+            verbose!(verbose, "  loaded index from .vit/index\n");
+            (wm, LsaStats::default())
+        }
+        Err(_) => {
+            verbose!(verbose, "  no index found, building...\n");
+            build_index(&commits, ctx)
+        }
+    };
+
     let build_time = t_build.elapsed();
 
     if wordmap.is_empty() {
@@ -95,6 +107,11 @@ pub fn near(ctx: &Context, args: &[String]) {
 
     ranked.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     let search_time = t_search.elapsed();
+
+    let count = query.limit.min(ranked.len());
+    for (c, dist) in &ranked[..count] {
+        println!("  {:.7}  {:>5.2}  {}", &c.hash[..7], dist, c.message);
+    }
 
     verbose!(verbose, "");
     verbose!(
@@ -121,9 +138,4 @@ pub fn near(ctx: &Context, args: &[String]) {
     verbose!(verbose, "  lsa build   {:.2?}", build_time);
     verbose!(verbose, "  search      {:.2?}", search_time);
     verbose!(verbose, "");
-
-    let count = query.limit.min(ranked.len());
-    for (c, dist) in &ranked[..count] {
-        println!("  {:.7}  {:>5.2}  {}", &c.hash[..7], dist, c.message);
-    }
 }

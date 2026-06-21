@@ -1,9 +1,9 @@
 use crate::cmd::Instant;
 
-use crate::verbose;
-use crate::Context;
 use super::build_index;
+use crate::Context;
 use crate::git;
+use crate::verbose;
 
 #[derive(Default)]
 struct MapFlags {
@@ -40,6 +40,14 @@ pub fn map(ctx: &Context, args: &[String]) {
     if wordmap.is_empty() {
         eprintln!("not enough data for LSA");
         return;
+    }
+
+    match wordmap.save() {
+        Ok(_) => {}
+        Err(_) => {
+            eprintln!("failed to save the index");
+            return;
+        }
     }
 
     if list {

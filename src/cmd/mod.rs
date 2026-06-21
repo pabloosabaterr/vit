@@ -1,15 +1,16 @@
-mod map;
 mod help;
+mod map;
 mod near;
 
-pub use map::map;
 pub use help::help;
+pub use map::map;
 pub use near::near;
 
 use std::time::Instant;
 
 use crate::config::Context;
-use crate::lsa::{self, LsaStats, WordMap};
+use crate::lsa::{self, LsaStats};
+use crate::word_map::WordMap;
 use crate::{git, text};
 
 #[macro_export]
@@ -29,6 +30,3 @@ fn build_index(commits: &[git::Commit], ctx: &Context) -> (WordMap, LsaStats) {
 
     lsa::build(&messages, ctx.dims, ctx.scale)
 }
-
-
-
