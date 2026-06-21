@@ -52,6 +52,10 @@ You can find docs about how to contribute and ideas of what at:
 
 [CONTRIBUTING](./CONTRIBUTING.md)
 
+You'll find also interesting:
+
+[CODING-GUIDELINES](./CODING-GUIDELINES.md)
+
 ## Example
 
 ```
@@ -67,9 +71,15 @@ $ vit near "fix authentication bug"
 ## Name
 
 "vit" comes from vectors + git, "vit" is Catalan for "seen"... also short
-enough to type thousands of times without complaint.
+enough to type thousands of times without pissing me off.
+
+I do like the name I promise :)
 
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
 or [MIT License](LICENSE-MIT), at your option.
+
+---
+
+Made with love and curiosity <3

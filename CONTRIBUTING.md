@@ -32,6 +32,10 @@ bash ./bench/all.sh
 It should be a few seconds. After the first run an speedup % will appear
 comparing the time with the last benchmark run.
 
+You will find also interesting:
+
+[CODING-GUIDELINES](./CODING-GUIDELINES.md)
+
 ## Discuss first
 
 It is highly encouraged to discuss what you want to do before doing it, that

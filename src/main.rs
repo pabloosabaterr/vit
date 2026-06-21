@@ -2,6 +2,16 @@ mod cmd;
 
 use vit::config::Context;
 
+/*
+ * Vit is a search engine for Git.
+ *
+ * Lets you search through commits in a semantic way, topics or things that are
+ * related. All of this in a deterministic way and _hopefully_ also fast.
+ *
+ * Sometimes Vit from vectors + Git... and sometimes a Very Irritating Tool.
+ *
+ * <3
+ */
 fn main() {
     let ctx = Context::load();
     let args: Vec<String> = std::env::args().skip(1).collect();
