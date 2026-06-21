@@ -14,10 +14,13 @@ Find commits closest to a message.
 
 options:
   -v, --verbose    show timing and debug info
+  -m, --map        rebuild the word map before searching
   -N               limit results (default: 10)";
 
 const GENERAL_HELP: &str = "\
 usage: vit <command>
+
+correlation search for git commits.
 
 commands:
   map              build word map from commits

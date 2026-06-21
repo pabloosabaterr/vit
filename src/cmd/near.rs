@@ -12,6 +12,7 @@ use crate::word_map::WordMap;
 #[derive(Default)]
 struct NearFlags {
     verbose: bool,
+    map: bool,
 }
 
 struct NearQuery {
@@ -37,6 +38,7 @@ fn near_parse_args(args: &[String]) -> Option<NearQuery> {
     for arg in args {
         match arg.as_str() {
             "-v" | "--verbose" => query.flags.verbose = true,
+            "-m" | "--map" => query.flags.map = true,
 
             opt if opt.starts_with('-') => {
                 if let Ok(n) = opt[1..].parse::<usize>() {
@@ -64,7 +66,7 @@ pub fn near(ctx: &Context, args: &[String]) {
             return;
         }
     };
-    let NearFlags { verbose } = query.flags;
+    let NearFlags { verbose, map } = query.flags;
 
     let t_git = Instant::now();
     let commits = git::read_commits(".", None);
@@ -74,14 +76,18 @@ pub fn near(ctx: &Context, args: &[String]) {
     }
 
     let t_build = Instant::now();
-    let (wordmap, stats) = match WordMap::load() {
-        Ok(wm) => {
-            verbose!(verbose, "  loaded index from .vit/index\n");
-            (wm, LsaStats::default())
-        }
-        Err(_) => {
-            verbose!(verbose, "  no index found, building...\n");
-            build_index(&commits, ctx)
+    let (wordmap, stats) = if map {
+        build_index(&commits, ctx)
+    } else {
+        match WordMap::load() {
+            Ok(wm) => {
+                verbose!(verbose, "  loaded index from .vit/index\n");
+                (wm, LsaStats::default())
+            }
+            Err(_) => {
+                verbose!(verbose, "  no index found, building...\n");
+                build_index(&commits, ctx)
+            }
         }
     };
 
