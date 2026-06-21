@@ -16,6 +16,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::lin_alg::power_iteration;
 use crate::sparse_matrix::SparseMatrix;
+use crate::verbose;
 
 pub const DEFAULT_DIMS: usize = 32;
 
@@ -151,7 +152,12 @@ impl WordMap {
     }
 }
 
-pub fn build(messages: &[String], dims: usize, scale: f64) -> WordMap {
+pub fn build(
+    messages: &[String],
+    dims: usize,
+    scale: f64,
+    verbose: bool,
+) -> WordMap {
     if messages.len() < 2 {
         return WordMap {
             coords: HashMap::new(),
@@ -169,29 +175,20 @@ pub fn build(messages: &[String], dims: usize, scale: f64) -> WordMap {
         };
     }
 
-    eprintln!(
-        "lsa: {} words, {} commits, {} dims",
-        word_nr,
-        messages.len(),
-        dims
-    );
+    verbose!(verbose, "  corpus      {} commits, {} words", messages.len(), word_nr);
 
     let importance_matrix = build_tfidf(messages, &words, word_nr, &word_freq);
     let (vectors, sigmas) = power_iteration(&importance_matrix, dims);
     let real_dimensions = vectors.len();
 
-    eprintln!(
-        "lsa: converged {} / {} dims (σ₁={:.4}{})",
+    verbose!(
+        verbose,
+        "  dims        {} / {} converged (σ₁={:.2}, σₖ={:.2})",
         real_dimensions,
         dims,
         sigmas[0],
-        if real_dimensions > 1 {
-            format!(", σ_last={:.4}", sigmas[real_dimensions - 1])
-        } else {
-            String::new()
-        }
+        sigmas[real_dimensions - 1]
     );
-
     /*
      * Build raw word vectors.
      *
