@@ -26,7 +26,7 @@ fn is_stopword(word: &str) -> bool {
     STOPWORDS.iter().any(|&s| s == word)
 }
 
-fn load_synonyms() -> HashMap<String, String> {
+pub fn load_synonyms() -> HashMap<String, String> {
     let mut map = HashMap::new();
     let content = match std::fs::read_to_string(".vitsynonyms") {
         Ok(c) => c,
@@ -60,10 +60,13 @@ fn strip_punctuation(word: &str) -> String {
         .collect()
 }
 
-/// Cleans and normalizes a commit message for hashing.
-/// Applies: lowercase, strip punctuation, stem each word.
-pub fn preprocess(message: &str) -> String {
-    let synonyms = load_synonyms();
+/*
+ * Cleans and normalizes a commit message for hashing.
+ * Applies: lowercase, strip punctuation, stem each word.
+ *
+ * It is caller duty to load the synonyms.
+ */
+pub fn preprocess(message: &str, syn: &HashMap<String, String>) -> String {
     message
         .split_whitespace()
         .flat_map(|w| {
@@ -73,7 +76,7 @@ pub fn preprocess(message: &str) -> String {
                 .collect::<Vec<_>>()
         })
         .filter(|w| !w.is_empty() && !is_stopword(w))
-        .map(|w| resolve_synonym(&w, &synonyms))
+        .map(|w| resolve_synonym(&w, syn))
         .map(|w| stemmer::stem(&w))
         .collect::<Vec<_>>()
         .join(" ")

@@ -5,7 +5,7 @@ use vit::commit::{CommitEntry, load_commits, save_commits};
 use vit::config::Context;
 use vit::git;
 use vit::lsa::LsaStats;
-use vit::text;
+use vit::text::{self, load_synonyms};
 use vit::vector::VectorInfo;
 use vit::verbose;
 use vit::word_map::WordMap;
@@ -69,18 +69,21 @@ pub fn near(ctx: &Context, args: &[String]) {
     };
     let NearFlags { verbose, map } = query.flags;
 
+    let synonyms = load_synonyms();
     let t_build = Instant::now();
     let (wordmap, entries, stats) = if map {
         let commits = git::read_commits(".", None);
+
         if commits.is_empty() {
             eprintln!("no commits found");
             return;
         }
-        let (wm, stats) = build_index(&commits, ctx);
+
+        let (wm, stats) = build_index(&commits, ctx, &synonyms);
         let entries: Vec<CommitEntry> = commits
             .iter()
             .map(|c| {
-                let clean = text::preprocess(&c.message);
+                let clean = text::preprocess(&c.message, &synonyms);
                 let info = VectorInfo::from_message(&clean, &wm);
                 CommitEntry {
                     hash: c.hash.clone(),
@@ -113,7 +116,7 @@ pub fn near(ctx: &Context, args: &[String]) {
     }
 
     let t_search = Instant::now();
-    let clean_query = text::preprocess(&query.text);
+    let clean_query = text::preprocess(&query.text, &synonyms);
     let target = VectorInfo::from_message(&clean_query, &wordmap);
     let mut ranked: Vec<_> = entries
         .iter()
