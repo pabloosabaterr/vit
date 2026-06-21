@@ -1,61 +1,76 @@
-use crate::config::Context;
-use crate::hash::PointInfo;
+use crate::lsa::WordMap;
 
 pub struct VectorInfo {
-    pub x: f64,
-    pub y: f64,
+    pub coords: Vec<f64>,
     #[allow(unused)]
     pub z: u64,
 }
 
 impl VectorInfo {
     /*
-     * Calculates the center of the vector words of a message.
-     * Each word has a decaying weight making first words to influence more
-     * over the final position than later ones. This makes keywords commonly
-     * found in formal commit messages like:
+     * Calculates the centroid of the word vectors of a message in N-dimensional
+     * LSA space.
      *
-     *   "fix: ...", "feat: ...", "login: ..."
-     *
-     * To become the carriers of the message vector, while the rest will serve
-     * for the position around the cluster.
+     * All words contribute equally. The LSA embeddings already encode semantic
+     * weight through co-occurrence
      */
-    pub fn from_message(message: &str, ctx: &Context) -> Self {
-        let mut x = 0.0;
-        let mut y = 0.0;
-        /*
-         * Accumulated weight to normalize the final coords, making the
-         * length of a message less relevant to the final position.
-         */
-        let mut weight = 0.0;
+    pub fn from_message(message: &str, word_map: &WordMap) -> Self {
+        let dims = word_map.dims();
+        let mut acc = vec![0.0; dims];
+        let mut count = 0usize;
 
-        for (i, word) in message.split_whitespace().enumerate() {
-            /*
-             * Similar to gravity (1 / r^2).
-             * Powering widens exponentially the gap between
-             * words making the decay more effective after distance
-             * becomes compressed.
-             *
-             * Users can set a decay factor to change the decay
-             * aggressiveness.
-             */
-            let w =
-                1.0 / (1.0 + ctx.word_decay * i as f64).powi(2);
-            let p = PointInfo::from_word(word, ctx);
-            x += p.x * w;
-            y += p.y * w;
-            weight += w;
+        for word in message.split_whitespace() {
+            let wv = match word_map.get(word) {
+                Some(v) => v,
+                None => continue,
+            };
+
+            for (j, &val) in wv.iter().enumerate() {
+                acc[j] += val;
+            }
+            count += 1;
         }
 
-        if weight == 0.0 {
-            return VectorInfo { x: 0.0, y: 0.0, z: 0 };
+        if count == 0 {
+            return VectorInfo {
+                coords: vec![0.0; dims],
+                z: 0,
+            };
         }
 
-        /* Message vector is the center of mass */
-        VectorInfo {
-            x: x / weight,
-            y: y / weight,
-            z: 0,
+        let n = count as f64;
+        for v in acc.iter_mut() {
+            *v /= n;
         }
+
+        VectorInfo { coords: acc, z: 0 }
+    }
+
+    pub fn dist(&self, other: &VectorInfo) -> f64 {
+        self.coords
+            .iter()
+            .zip(other.coords.iter())
+            .map(|(a, b)| (a - b).powi(2))
+            .sum::<f64>()
+            .sqrt()
+    }
+
+    /*
+     * Alternative, I need to test this.
+     */
+    #[allow(unused)]
+    pub fn cosine(&self, other: &VectorInfo) -> f64 {
+        let dot: f64 = self
+            .coords
+            .iter()
+            .zip(other.coords.iter())
+            .map(|(a, b)| a * b)
+            .sum();
+        let na: f64 = self.coords.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let nb: f64 = other.coords.iter().map(|x| x * x).sum::<f64>().sqrt();
+        if na == 0.0 || nb == 0.0 {
+            return 0.0;
+        }
+        dot / (na * nb)
     }
 }

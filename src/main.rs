@@ -1,7 +1,9 @@
 mod cmd;
 mod config;
 mod git;
-mod hash;
+mod lin_alg;
+mod lsa;
+mod sparse_matrix;
 mod stemmer;
 mod text;
 mod vector;
@@ -22,9 +24,10 @@ fn main() {
                 return;
             }
             cmd::near(&ctx, &args[1..]);
-        }        Some(other) => {
+        }
+        Some(other) => {
             eprintln!("unknown command: {}", other);
         }
-        None => cmd::help()
+        None => cmd::help(),
     }
 }

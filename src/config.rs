@@ -1,28 +1,30 @@
+use crate::lsa;
+
 pub struct Context {
     pub scale: f64,
-    pub word_decay: f64,
-    pub char_decay: f64,
+    pub dims: usize,
 }
 
 impl Default for Context {
     fn default() -> Self {
         Context {
             scale: 1.0,
-            word_decay: 1.0,
-            char_decay: 1.0,
+            dims: lsa::DEFAULT_DIMS,
         }
     }
 }
 
 impl Context {
     fn update(&mut self, key: &str, value: &str) -> bool {
-        let field = match key {
-            "scale" => &mut self.scale,
-            "word-decay" => &mut self.word_decay,
-            "char-decay" => &mut self.char_decay,
+        match key {
+            "scale" => {
+                self.scale = value.parse().unwrap_or(self.scale);
+            }
+            "dims" => {
+                self.dims = value.parse().unwrap_or(self.dims);
+            }
             _ => return false,
-        };
-        *field = value.parse().unwrap_or(*field);
+        }
         true
     }
 
