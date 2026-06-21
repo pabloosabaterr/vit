@@ -15,7 +15,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     match args.first().map(|s| s.as_str()) {
-        Some("map") => cmd::map(&ctx),
+        Some("map") => cmd::map(&ctx, &args[1..]),
         Some("help") | Some("--help") | Some("-h") => cmd::help(),
         Some("near") => cmd::near(&ctx, &args[1..]),
         Some(other) => {

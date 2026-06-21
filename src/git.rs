@@ -12,6 +12,7 @@ use std::process::Command;
 
 pub struct Commit {
     pub hash: String,
+    #[allow(unused)]
     pub timestamp: u64,
     pub message: String,
 }

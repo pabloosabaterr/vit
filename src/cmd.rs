@@ -1,13 +1,9 @@
 use std::time::Instant;
 
 use crate::config::Context;
-use crate::lsa::{self, WordMap};
+use crate::lsa::{self, LsaStats, WordMap};
 use crate::vector::VectorInfo;
 use crate::{git, text};
-
-fn log_config(ctx: &Context) {
-    eprintln!("config:     dims={}, scale={}", ctx.dims, ctx.scale,);
-}
 
 #[macro_export]
 macro_rules! verbose {
@@ -18,40 +14,81 @@ macro_rules! verbose {
     };
 }
 
-fn build_index(commits: &[git::Commit], ctx: &Context, verbose: bool) -> WordMap {
-    let t_git = Instant::now();
+fn build_index(commits: &[git::Commit], ctx: &Context) -> (WordMap, LsaStats) {
     let messages: Vec<String> = commits
         .iter()
         .map(|c| text::preprocess(&c.message))
         .collect();
-    verbose!(verbose, "  preprocess  {:.2?}", t_git.elapsed());
 
-    let t_build = Instant::now();
-    let wm = lsa::build(&messages, ctx.dims, ctx.scale, verbose);
-    verbose!(verbose, "  lsa build   {:.2?}", t_build.elapsed());
-
-    wm
+    lsa::build(&messages, ctx.dims, ctx.scale)
 }
 
-pub fn map(ctx: &Context) {
-    log_config(ctx);
+#[derive(Default)]
+struct MapFlags {
+    verbose: bool,
+    list: bool,
+}
+
+fn map_parse_args(args: &[String]) -> MapFlags {
+    let mut flags = MapFlags::default();
+    for arg in args {
+        match arg.as_str() {
+            "-l" | "--list" => flags.list = true,
+            "-v" | "--verbose" => flags.verbose = true,
+            _ => {}
+        }
+    }
+    flags
+}
+
+pub fn map(ctx: &Context, args: &[String]) {
+    let MapFlags { verbose, list } = map_parse_args(args);
+
     let t_git = Instant::now();
     let commits = git::read_commits(".", None);
-    eprintln!("git log:    {:.2?}", t_git.elapsed());
     if commits.is_empty() {
         eprintln!("no commits found");
         return;
     }
 
-    let wm = build_index(&commits, ctx, false);
-    if wm.is_empty() {
+    let t_build = Instant::now();
+    let (wordmap, stats) = build_index(&commits, ctx);
+    let build_time = t_build.elapsed();
+
+    if wordmap.is_empty() {
         eprintln!("not enough data for LSA");
         return;
     }
 
-    for c in &commits {
-        println!("{:.7} : {}", &c.hash[..7], c.message);
+    if list {
+        for c in &commits {
+            println!("  {:.7}  {}", &c.hash[..7], c.message);
+        }
+        eprintln!("");
     }
+
+    verbose!(
+        verbose,
+        "  corpus      {} commits, {} words",
+        stats.commit_count,
+        stats.word_count
+    );
+    verbose!(
+        verbose,
+        "  dims        {} / {} converged (σ₁={:.2}, σₖ={:.2})",
+        stats.dimensions,
+        ctx.dims,
+        stats.sigma_first,
+        stats.sigma_last
+    );
+    verbose!(verbose, "  git log     {:.2?}", t_git.elapsed());
+    verbose!(verbose, "  lsa build   {:.2?}", build_time);
+    verbose!(verbose, "");
+
+    eprintln!(
+        "  mapped {} commits, {} words, {} dims",
+        stats.commit_count, stats.word_count, stats.dimensions
+    );
 }
 
 pub fn help() {
@@ -132,7 +169,10 @@ pub fn near(ctx: &Context, args: &[String]) {
         return;
     }
 
-    let wordmap = build_index(&commits, ctx, verbose);
+    let t_build = Instant::now();
+    let (wordmap, stats) = build_index(&commits, ctx);
+    let build_time = t_build.elapsed();
+
     if wordmap.is_empty() {
         eprintln!("not enough data for LSA");
         return;
@@ -150,12 +190,33 @@ pub fn near(ctx: &Context, args: &[String]) {
             (c, dist)
         })
         .collect();
+
     ranked.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     let search_time = t_search.elapsed();
 
     verbose!(verbose, "");
-    verbose!(verbose, "  query       \"{}\" → \"{}\"", query.text, clean_query);
+    verbose!(
+        verbose,
+        "  query       \"{}\" → \"{}\"",
+        query.text,
+        clean_query
+    );
+    verbose!(
+        verbose,
+        "  corpus      {} commits, {} words",
+        stats.commit_count,
+        stats.word_count
+    );
+    verbose!(
+        verbose,
+        "  dims        {} / {} converged (σ₁={:.2}, σₖ={:.2})",
+        stats.dimensions,
+        ctx.dims,
+        stats.sigma_first,
+        stats.sigma_last
+    );
     verbose!(verbose, "  git log     {:.2?}", t_git.elapsed());
+    verbose!(verbose, "  lsa build   {:.2?}", build_time);
     verbose!(verbose, "  search      {:.2?}", search_time);
     verbose!(verbose, "");
 

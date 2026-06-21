@@ -16,7 +16,6 @@ use std::collections::{HashMap, HashSet};
 
 use crate::lin_alg::power_iteration;
 use crate::sparse_matrix::SparseMatrix;
-use crate::verbose;
 
 pub const DEFAULT_DIMS: usize = 32;
 
@@ -152,49 +151,51 @@ impl WordMap {
     }
 }
 
-pub fn build(
-    messages: &[String],
-    dims: usize,
-    scale: f64,
-    verbose: bool,
-) -> WordMap {
+#[derive(Default)]
+pub struct LsaStats {
+    pub word_count: usize,
+    pub commit_count: usize,
+    pub dimensions: usize,
+    pub sigma_first: f64,
+    pub sigma_last: f64,
+}
+
+pub fn build(messages: &[String], dims: usize, scale: f64) -> (WordMap, LsaStats) {
     if messages.len() < 2 {
-        return WordMap {
-            coords: HashMap::new(),
-            dims,
-        };
+        return (
+            WordMap {
+                coords: HashMap::new(),
+                dims,
+            },
+            LsaStats::default(),
+        );
     }
 
     let (vocab, words, word_freq) = build_vocab(messages);
     let word_nr = vocab.len();
 
     if word_nr < 2 {
-        return WordMap {
-            coords: HashMap::new(),
-            dims,
-        };
+        return (
+            WordMap {
+                coords: HashMap::new(),
+                dims,
+            },
+            LsaStats::default(),
+        );
     }
-
-    verbose!(verbose, "  corpus      {} commits, {} words", messages.len(), word_nr);
 
     let importance_matrix = build_tfidf(messages, &words, word_nr, &word_freq);
     let (vectors, sigmas) = power_iteration(&importance_matrix, dims);
     let real_dimensions = vectors.len();
 
-    verbose!(
-        verbose,
-        "  dims        {} / {} converged (σ₁={:.2}, σₖ={:.2})",
-        real_dimensions,
-        dims,
-        sigmas[0],
-        sigmas[real_dimensions - 1]
-    );
-    /*
-     * Build raw word vectors.
-     *
-     * Scaling by sigma preserves the relative importance of each dimension, the
-     * first axis captures the most variance, the last the least.
-     */
+    let stats = LsaStats {
+        word_count: word_nr,
+        commit_count: messages.len(),
+        dimensions: real_dimensions,
+        sigma_first: sigmas[0],
+        sigma_last: sigmas[real_dimensions - 1],
+    };
+
     let target = 100.0 * scale;
     let mut max_abs = 0.0_f64;
 
@@ -219,9 +220,12 @@ pub fn build(
         coords.insert(word.clone(), scaled);
     }
 
-    WordMap {
-        coords,
-        dims: real_dimensions,
-    }
+    (
+        WordMap {
+            coords,
+            dims: real_dimensions,
+        },
+        stats,
+    )
 }
 
