@@ -62,5 +62,10 @@ $ vit near "fix authentication bug"
 
 ## Name
 
-"vit" comes from vectors + git, also "vit" is Catalan for "seen". Also short
+"vit" comes from vectors + git, "vit" is Catalan for "seen"... also short
 enough to type thousands of times without complaint.
+
+## License
+
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
+or [MIT License](LICENSE-MIT), at your option.
