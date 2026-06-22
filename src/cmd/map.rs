@@ -4,9 +4,7 @@ use vit::commit::CommitEntry;
 use vit::commit::save_commits;
 use vit::config::Context;
 use vit::git;
-use vit::text;
 use vit::text::load_synonyms;
-use vit::vector::VectorInfo;
 use vit::verbose;
 
 #[derive(Default)]
@@ -39,7 +37,7 @@ pub fn map(ctx: &Context, args: &[String]) {
 
     let t_build = Instant::now();
     let synonyms = load_synonyms();
-    let (wordmap, stats) = build_index(&commits, ctx, &synonyms);
+    let (wordmap, positions, stats) = build_index(&commits, ctx, &synonyms);
     let build_time = t_build.elapsed();
 
     if wordmap.is_empty() {
@@ -49,14 +47,11 @@ pub fn map(ctx: &Context, args: &[String]) {
 
     let entries: Vec<CommitEntry> = commits
         .iter()
-        .map(|c| {
-            let clean = text::preprocess(&c.message, &synonyms);
-            let info = VectorInfo::from_message(&clean, &wordmap);
-            CommitEntry {
-                hash: c.hash.clone(),
-                message: c.message.clone(),
-                position: info.to_vec(),
-            }
+        .zip(positions.iter())
+        .map(|(c, pos)| CommitEntry {
+            hash: c.hash.clone(),
+            message: c.message.clone(),
+            position: pos.clone(),
         })
         .collect();
 

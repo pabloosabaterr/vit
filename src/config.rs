@@ -1,14 +1,12 @@
 use crate::lsa;
 
 pub struct Context {
-    pub scale: f64,
     pub dims: usize,
 }
 
 impl Default for Context {
     fn default() -> Self {
         Context {
-            scale: 1.0,
             dims: lsa::DEFAULT_DIMS,
         }
     }
@@ -17,9 +15,6 @@ impl Default for Context {
 impl Context {
     fn update(&mut self, key: &str, value: &str) -> bool {
         match key {
-            "scale" => {
-                self.scale = value.parse().unwrap_or(self.scale);
-            }
             "dims" => {
                 self.dims = value.parse().unwrap_or(self.dims);
             }

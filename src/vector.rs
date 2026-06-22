@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::word_map::WordMap;
 
 pub struct VectorInfo {
@@ -7,40 +9,40 @@ pub struct VectorInfo {
 }
 
 impl VectorInfo {
-    /*
-     * Calculates the centroid of the word vectors of a message in N-dimensional
-     * LSA space.
-     *
-     * All words contribute equally. The LSA embeddings already encode semantic
-     * weight through co-occurrence
-     */
     pub fn from_message(message: &str, word_map: &WordMap) -> Self {
         let dims = word_map.dims();
-        let mut acc = vec![0.0; dims];
-        let mut count = 0usize;
+        let tokens: Vec<&str> = message.split_whitespace().collect();
 
-        for word in message.split_whitespace() {
-            let wv = match word_map.get(word) {
-                Some(v) => v,
-                None => continue,
-            };
-
-            for (j, &val) in wv.iter().enumerate() {
-                acc[j] += val;
-            }
-            count += 1;
-        }
-
-        if count == 0 {
+        if tokens.is_empty() {
             return VectorInfo {
                 coords: vec![0.0; dims],
                 z: 0,
             };
         }
 
-        let n = count as f64;
-        for v in acc.iter_mut() {
-            *v /= n;
+        let mut counts: HashMap<&str, usize> = HashMap::new();
+        for &w in &tokens {
+            *counts.entry(w).or_insert(0) += 1;
+        }
+
+        let total = tokens.len() as f64;
+        let mut acc = vec![0.0; dims];
+
+        for (&word, &count) in &counts {
+            let wv = match word_map.get(word) {
+                Some(v) => v,
+                None => continue,
+            };
+            let idf = match word_map.idf(word) {
+                Some(v) => v,
+                None => continue,
+            };
+
+            let weight = (count as f64 / total) * idf;
+
+            for (j, &val) in wv.iter().enumerate() {
+                acc[j] += weight * val;
+            }
         }
 
         VectorInfo { coords: acc, z: 0 }

@@ -73,23 +73,18 @@ pub fn near(ctx: &Context, args: &[String]) {
     let t_build = Instant::now();
     let (wordmap, entries, stats) = if map {
         let commits = git::read_commits(".", None);
-
         if commits.is_empty() {
             eprintln!("no commits found");
             return;
         }
-
-        let (wm, stats) = build_index(&commits, ctx, &synonyms);
+        let (wm, positions, stats) = build_index(&commits, ctx, &synonyms);
         let entries: Vec<CommitEntry> = commits
             .iter()
-            .map(|c| {
-                let clean = text::preprocess(&c.message, &synonyms);
-                let info = VectorInfo::from_message(&clean, &wm);
-                CommitEntry {
-                    hash: c.hash.clone(),
-                    message: c.message.clone(),
-                    position: info.to_vec(),
-                }
+            .zip(positions.iter())
+            .map(|(c, pos)| CommitEntry {
+                hash: c.hash.clone(),
+                message: c.message.clone(),
+                position: pos.clone(),
             })
             .collect();
         wm.save().ok();

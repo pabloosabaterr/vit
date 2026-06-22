@@ -10,11 +10,16 @@ use std::{collections::HashMap, fs, io::Result};
 pub struct WordMap {
     coords: HashMap<String, Vec<f64>>,
     dims: usize,
+    idf: HashMap<String, f64>,
 }
 
 impl WordMap {
     pub fn get(&self, word: &str) -> Option<&Vec<f64>> {
         self.coords.get(word)
+    }
+
+    pub fn idf(&self, word: &str) -> Option<f64> {
+        self.idf.get(word).copied()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -29,10 +34,13 @@ impl WordMap {
         self.coords.len()
     }
 
-    pub fn from_raw(coords: HashMap<String, Vec<f64>>, dims: usize) -> Self {
-        Self { coords, dims }
+    pub fn from_raw(
+        coords: HashMap<String, Vec<f64>>,
+        idf: HashMap<String, f64>,
+        dims: usize,
+    ) -> Self {
+        Self { coords, idf, dims }
     }
-
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<f64>)> {
         self.coords.iter()
     }
@@ -47,6 +55,10 @@ impl WordMap {
         for (word, coords) in self.iter() {
             buf.extend(&(word.len() as u32).to_le_bytes());
             buf.extend(word.as_bytes());
+
+            let idf = self.idf.get(word).copied().unwrap_or(0.0);
+            buf.extend(&idf.to_le_bytes());
+
             for &val in coords {
                 buf.extend(&val.to_le_bytes());
             }
@@ -62,18 +74,24 @@ impl WordMap {
         let dims =
             u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
         pos += 4;
+
         let word_count =
             u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
         pos += 4;
 
         let mut coords = HashMap::with_capacity(word_count);
+        let mut idf_map = HashMap::with_capacity(word_count);
 
         for _ in 0..word_count {
             let word_len =
                 u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
             pos += 4;
+
             let word = String::from_utf8(buf[pos..pos + word_len].to_vec()).unwrap();
             pos += word_len;
+
+            let idf = f64::from_le_bytes(buf[pos..pos + 8].try_into().unwrap());
+            pos += 8;
 
             let mut vec = Vec::with_capacity(dims);
             for _ in 0..dims {
@@ -82,9 +100,10 @@ impl WordMap {
                 vec.push(val);
             }
 
+            idf_map.insert(word.clone(), idf);
             coords.insert(word, vec);
         }
 
-        Ok(WordMap::from_raw(coords, dims))
+        Ok(WordMap::from_raw(coords, idf_map, dims))
     }
 }

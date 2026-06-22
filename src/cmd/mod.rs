@@ -17,11 +17,11 @@ fn build_index(
     commits: &[git::Commit],
     ctx: &Context,
     syn: &HashMap<String, String>,
-) -> (WordMap, LsaStats) {
+) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
     let messages: Vec<String> = commits
         .iter()
         .map(|c| text::preprocess(&c.message, syn))
         .collect();
 
-    lsa::build(&messages, ctx.dims, ctx.scale)
+    lsa::build(&messages, ctx.dims)
 }

@@ -71,6 +71,18 @@ fn build_vocab(
     (vocab, words, word_frequency)
 }
 
+fn get_idf(word_freq: &[usize], doc_nr: usize) -> Vec<f64> {
+    let log_docs = (doc_nr as f64).ln();
+
+    word_freq
+        .iter()
+        .map(|&freq| {
+            let idf = log_docs - (freq as f64).ln();
+            if idf > 0.0 { idf } else { 0.0 }
+        })
+        .collect()
+}
+
 /*
  * Build a wordsxcommits matrix weighted by:
  *
@@ -83,10 +95,9 @@ fn build_tfidf(
     messages: &[String],
     words: &HashMap<String, usize>,
     word_nr: usize,
-    word_freq: &[usize],
+    idf: &[f64],
 ) -> SparseMatrix {
     let doc_nr = messages.len();
-    let log_docs = (doc_nr as f64).ln();
     let mut triplets: Vec<(usize, usize, f64)> = Vec::new();
 
     for (doc, msg) in messages.iter().enumerate() {
@@ -116,10 +127,10 @@ fn build_tfidf(
              *       bodies as well.
              */
             let term_freq = count as f64 / tokens.len() as f64;
-            let idf = log_docs - (word_freq[word_id] as f64).ln();
+            let weight = term_freq * idf[word_id];
 
-            if idf > 0.0 {
-                triplets.push((word_id, doc, term_freq * idf));
+            if weight > 0.0 {
+                triplets.push((word_id, doc, weight));
             }
         }
     }
@@ -169,19 +180,31 @@ impl LsaStats {
     }
 }
 
-pub fn build(messages: &[String], dims: usize, scale: f64) -> (WordMap, LsaStats) {
+pub fn build(
+    messages: &[String],
+    dims: usize,
+) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
     if messages.len() < 2 {
-        return (WordMap::from_raw(HashMap::new(), dims), LsaStats::default());
+        return (
+            WordMap::from_raw(HashMap::new(), HashMap::new(), dims),
+            Vec::new(),
+            LsaStats::default(),
+        );
     }
 
     let (vocab, words, word_freq) = build_vocab(messages);
     let word_nr = vocab.len();
 
     if word_nr < 2 {
-        return (WordMap::from_raw(HashMap::new(), dims), LsaStats::default());
+        return (
+            WordMap::from_raw(HashMap::new(), HashMap::new(), dims),
+            Vec::new(),
+            LsaStats::default(),
+        );
     }
 
-    let importance_matrix = build_tfidf(messages, &words, word_nr, &word_freq);
+    let idf = get_idf(&word_freq, messages.len());
+    let importance_matrix = build_tfidf(messages, &words, word_nr, &idf);
     let (vectors, sigmas) = power_iteration(&importance_matrix, dims);
     let real_dimensions = vectors.len();
 
@@ -193,29 +216,30 @@ pub fn build(messages: &[String], dims: usize, scale: f64) -> (WordMap, LsaStats
         sigma_last: sigmas[real_dimensions - 1],
     };
 
-    let target = 100.0 * scale;
-    let mut max_abs = 0.0_f64;
-
-    let raw: Vec<Vec<f64>> = (0..word_nr)
-        .map(|i| {
-            let v: Vec<f64> = (0..real_dimensions)
-                .map(|d| {
-                    let val = sigmas[d] * vectors[d][i];
-                    max_abs = max_abs.max(val.abs());
-                    val
-                })
-                .collect();
-            v
-        })
-        .collect();
-
-    let factor = if max_abs > 0.0 { target / max_abs } else { 1.0 };
-
     let mut coords = HashMap::with_capacity(word_nr);
+    let mut idf_map = HashMap::with_capacity(word_nr);
+
     for (i, word) in vocab.iter().enumerate() {
-        let scaled: Vec<f64> = raw[i].iter().map(|v| v * factor).collect();
-        coords.insert(word.clone(), scaled);
+        let v: Vec<f64> = (0..real_dimensions).map(|d| vectors[d][i]).collect();
+        coords.insert(word.clone(), v);
+        idf_map.insert(word.clone(), idf[i]);
     }
 
-    (WordMap::from_raw(coords, real_dimensions), stats)
+    let commit_nr = messages.len();
+    let mut commit_positions: Vec<Vec<f64>> =
+        vec![vec![0.0; real_dimensions]; commit_nr];
+    let mut column = vec![0.0; commit_nr];
+
+    for d in 0..real_dimensions {
+        importance_matrix.mul_vec_t(&vectors[d], &mut column);
+        for j in 0..commit_nr {
+            commit_positions[j][d] = column[j];
+        }
+    }
+
+    (
+        WordMap::from_raw(coords, idf_map, real_dimensions),
+        commit_positions,
+        stats,
+    )
 }
