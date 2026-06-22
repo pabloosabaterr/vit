@@ -5,6 +5,7 @@ pub mod lin_alg;
 pub mod lsa;
 pub mod sparse_matrix;
 pub mod stemmer;
+pub mod term;
 pub mod text;
 pub mod vector;
 pub mod word_map;
