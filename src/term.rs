@@ -66,14 +66,28 @@ fn build_vocab(
     (vocab, words, word_frequency)
 }
 
+/*
+ * BM25 parameters
+ *
+ * K handles the saturation, A higher K makes it behave more lineal while a lower one
+ * does the oposite making it plateau faster.
+ *
+ * B handles the normalization.
+ *
+ * They both use the standar values for this constant a study about them would be be
+ * nice though.
+ */
+const BM25_K: f64 = 1.2;
+const BM25_B: f64 = 0.75;
+
 fn get_idf(word_freq: &[usize], doc_nr: usize) -> Vec<f64> {
-    let log_docs = (doc_nr as f64).ln();
+    let doc_nr = doc_nr as f64;
 
     word_freq
         .iter()
         .map(|&freq| {
-            let idf = log_docs - (freq as f64).ln();
-            if idf > 0.0 { idf } else { 0.0 }
+            let df = freq as f64;
+            ((doc_nr - df + 0.5) / (df + 0.5) + 1.0).ln()
         })
         .collect()
 }
@@ -86,7 +100,7 @@ fn get_idf(word_freq: &[usize], doc_nr: usize) -> Vec<f64> {
  * Each entry measures how important that word is to a specific commit.
  * Note that a commit is a document and a term is a word.
  */
-fn build_tfidf(
+fn build_matrix(
     messages: &[String],
     words: &HashMap<String, usize>,
     word_nr: usize,
@@ -95,12 +109,20 @@ fn build_tfidf(
     let doc_nr = messages.len();
     let mut triplets: Vec<(usize, usize, f64)> = Vec::new();
 
+    let avg_commit_len: f64 = messages
+        .iter()
+        .map(|m| m.split_whitespace().count() as f64)
+        .sum::<f64>()
+        / doc_nr as f64;
+
     for (doc, msg) in messages.iter().enumerate() {
         let tokens: Vec<&str> = msg.split_whitespace().collect();
 
         if tokens.is_empty() {
             continue;
         }
+
+        let commit_len = tokens.len() as f64;
 
         /*
          * term frequency within this commit.
@@ -121,8 +143,12 @@ fn build_tfidf(
              *       matters, it would be more relevant if we care about the commit
              *       bodies as well.
              */
-            let term_freq = count as f64 / tokens.len() as f64;
-            let weight = term_freq * idf[word_id];
+            let term_freq = count as f64;
+            let norm_tf = (term_freq * (BM25_K + 1.0))
+                / (term_freq
+                    + BM25_K
+                        * (1.0 - BM25_B + BM25_B * commit_len / avg_commit_len));
+            let weight = idf[word_id] * norm_tf;
 
             if weight > 0.0 {
                 triplets.push((word_id, doc, weight));
@@ -141,7 +167,7 @@ pub fn get_sparse_matrix(messages: &[String]) -> Option<TermData> {
     }
 
     let idf = get_idf(&word_freq, messages.len());
-    let matrix = build_tfidf(messages, &words, vocab.len(), &idf);
+    let matrix = build_matrix(messages, &words, vocab.len(), &idf);
 
     Some(TermData {
         matrix,
