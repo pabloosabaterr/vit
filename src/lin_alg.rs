@@ -39,7 +39,7 @@ fn init_vector(size: usize, dim: usize) -> Vec<f64> {
     vector
 }
 
-pub(crate) fn power_iteration(
+pub fn power_iteration(
     importance_matrix: &SparseMatrix,
     dims: usize,
 ) -> (Vec<Vec<f64>>, Vec<f64>) {

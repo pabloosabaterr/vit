@@ -25,6 +25,7 @@ use crate::sparse_matrix::SparseMatrix;
  */
 fn build_vocab(
     messages: &[String],
+    min_freq: usize,
 ) -> (Vec<String>, HashMap<String, usize>, Vec<usize>) {
     let mut raw_frequency: HashMap<String, usize> = HashMap::new();
     let mut seen = HashSet::new();
@@ -47,6 +48,40 @@ fn build_vocab(
     let mut word_frequency: Vec<usize> = Vec::new();
 
     /*
+     * TODO:
+     * The magic number 100 is just a very vague guess of what is the minimum context
+     * needed where we can afford loosing words (excluding the ones that only appear
+     * once in a commit) without loosing too much precision.
+     *
+     * Benchmarks with minimum freq:
+     *
+     * - Git 84891 commits
+     * map                    3237ms  +14%
+     * near                     24ms  +4%
+     *
+     * - Rust 335294 commits
+     * map                   12953ms  +37%
+     * near                     85ms  +10%
+     *
+     * - Vit 52 commits
+     * map                      16ms  +6%
+     * near                      7ms  0%
+     *
+     * As it can be been having a min_freq of 2 reduces the performance very
+     * significantly thus it is important to determine the threshold.
+     */
+    let min_freq = match min_freq {
+        0 => {
+            if messages.len() < 100 {
+                1
+            } else {
+                2
+            }
+        }
+        n => n,
+    };
+
+    /*
      * Iterate over the raw frequencies and exclude the ones that appear less than
      * the minimum required.
      *
@@ -54,7 +89,7 @@ fn build_vocab(
      * correlate with other commits.
      */
     for (word, &freq) in &raw_frequency {
-        if freq < 2 {
+        if freq < min_freq {
             continue;
         }
 
@@ -159,8 +194,8 @@ fn build_matrix(
     SparseMatrix::from_triplets(word_nr, doc_nr, &mut triplets)
 }
 
-pub fn get_sparse_matrix(messages: &[String]) -> Option<TermData> {
-    let (vocab, words, word_freq) = build_vocab(messages);
+pub fn get_sparse_matrix(messages: &[String], min_freq: usize) -> Option<TermData> {
+    let (vocab, words, word_freq) = build_vocab(messages, min_freq);
 
     if vocab.len() < 2 {
         return None;

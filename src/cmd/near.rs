@@ -116,16 +116,16 @@ pub fn near(ctx: &Context, args: &[String]) {
     let mut ranked: Vec<_> = entries
         .iter()
         .map(|c| {
-            let dist = target.dist_vec(&c.position);
-            (c, dist)
+            let cosine = target.cosine_vec(&c.position);
+            (c, cosine)
         })
         .collect();
-    ranked.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
     let search_time = t_search.elapsed();
 
     let count = query.limit.min(ranked.len());
-    for (c, dist) in &ranked[..count] {
-        println!("  {:.7}  {:>5.2}  {}", &c.hash[..7], dist, c.message);
+    for (c, cosine) in &ranked[..count] {
+        println!("  {:.7}  {:>5.2}  {}", &c.hash[..7], cosine, c.message);
     }
     verbose!(verbose, "");
     verbose!(

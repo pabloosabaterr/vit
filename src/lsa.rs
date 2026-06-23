@@ -15,6 +15,7 @@
 use std::collections::HashMap;
 use std::io::Result;
 
+use crate::config::Context;
 use crate::lin_alg::power_iteration;
 use crate::term::get_sparse_matrix;
 use crate::word_map::WordMap;
@@ -65,8 +66,9 @@ impl LsaStats {
 
 pub fn build(
     messages: &[String],
-    dims: usize,
+    ctx: &Context,
 ) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
+    let &Context { dims, min_freq } = ctx;
     if messages.len() < 2 {
         return (
             WordMap::from_raw(HashMap::new(), HashMap::new(), dims),
@@ -79,7 +81,7 @@ pub fn build(
      * Build vocabulary and weignts, Lsa builder should be agnostic about which
      * agorithm is used.
      */
-    let term = match get_sparse_matrix(messages) {
+    let term = match get_sparse_matrix(messages, min_freq) {
         Some(m) => m,
         None => {
             return (

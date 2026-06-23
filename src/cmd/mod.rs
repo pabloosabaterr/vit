@@ -23,5 +23,5 @@ fn build_index(
         .map(|c| text::preprocess(&c.message, syn))
         .collect();
 
-    lsa::build(&messages, ctx.dims)
+    lsa::build(&messages, ctx)
 }

@@ -1,9 +1,9 @@
 /*
  * Stores a words×commits matrix where most entries are zero.
  */
-pub(crate) struct SparseMatrix {
-    pub(crate) rows: usize,
-    pub(crate) cols: usize,
+pub struct SparseMatrix {
+    pub rows: usize,
+    pub cols: usize,
     row_ptr: Vec<usize>,
     col_idx: Vec<usize>,
     values: Vec<f64>,

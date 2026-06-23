@@ -61,31 +61,19 @@ impl VectorInfo {
         self.coords.clone()
     }
 
-    pub fn dist_vec(&self, other: &[f64]) -> f64 {
-        self.coords
-            .iter()
-            .zip(other.iter())
-            .map(|(a, b)| (a - b).powi(2))
-            .sum::<f64>()
-            .sqrt()
-    }
-
-    /*
-     * Alternative, I need to test this.
-     */
-    #[allow(unused)]
-    pub fn cosine(&self, other: &VectorInfo) -> f64 {
+    pub fn cosine_vec(&self, other: &[f64]) -> f64 {
         let dot: f64 = self
             .coords
             .iter()
-            .zip(other.coords.iter())
+            .zip(other.iter())
             .map(|(a, b)| a * b)
             .sum();
         let na: f64 = self.coords.iter().map(|x| x * x).sum::<f64>().sqrt();
-        let nb: f64 = other.coords.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let nb: f64 = other.iter().map(|x| x * x).sum::<f64>().sqrt();
         if na == 0.0 || nb == 0.0 {
-            return 0.0;
+            0.0
+        } else {
+            dot / (na * nb)
         }
-        dot / (na * nb)
     }
 }

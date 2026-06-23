@@ -2,12 +2,14 @@ use crate::lsa;
 
 pub struct Context {
     pub dims: usize,
+    pub min_freq: usize,
 }
 
 impl Default for Context {
     fn default() -> Self {
         Context {
             dims: lsa::DEFAULT_DIMS,
+            min_freq: 0,
         }
     }
 }
@@ -17,6 +19,9 @@ impl Context {
         match key {
             "dims" => {
                 self.dims = value.parse().unwrap_or(self.dims);
+            }
+            "min-freq" => {
+                self.min_freq = value.parse().unwrap_or(self.min_freq);
             }
             _ => return false,
         }
