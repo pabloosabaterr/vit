@@ -5,7 +5,7 @@ use vit::commit::save_commits;
 use vit::config::Context;
 use vit::git;
 use vit::text::load_synonyms;
-use vit::verbose;
+use vit::{die, verbose};
 
 #[derive(Default)]
 struct MapFlags {
@@ -19,7 +19,7 @@ fn map_parse_args(args: &[String]) -> MapFlags {
         match arg.as_str() {
             "-l" | "--list" => flags.list = true,
             "-v" | "--verbose" => flags.verbose = true,
-            _ => {}
+            _ => die!("unrecognized option \"{}\"", arg),
         }
     }
     flags

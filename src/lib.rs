@@ -18,3 +18,11 @@ macro_rules! verbose {
         }
     };
 }
+
+#[macro_export]
+macro_rules! die {
+    ($($arg:tt)*) => {{
+        eprintln!("fatal: {}", format!($($arg)*));
+        std::process::exit(1);
+    }};
+}

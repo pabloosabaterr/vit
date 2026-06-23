@@ -7,8 +7,8 @@ use vit::git;
 use vit::lsa::LsaStats;
 use vit::text::{self, load_synonyms};
 use vit::vector::VectorInfo;
-use vit::verbose;
 use vit::word_map::WordMap;
+use vit::{die, verbose};
 
 #[derive(Default)]
 struct NearFlags {
@@ -35,19 +35,42 @@ impl Default for NearQuery {
 fn near_parse_args(args: &[String]) -> Option<NearQuery> {
     let mut query = NearQuery::default();
     let mut words = Vec::new();
+    let mut query_done = false;
 
     for arg in args {
         match arg.as_str() {
-            "-v" | "--verbose" => query.flags.verbose = true,
-            "-m" | "--map" => query.flags.map = true,
+            "-v" | "--verbose" => {
+                if !words.is_empty() {
+                    query_done = true;
+                }
+                query.flags.verbose = true;
+            }
+            "-m" | "--map" => {
+                if !words.is_empty() {
+                    query_done = true;
+                }
+                query.flags.map = true;
+            }
 
             opt if opt.starts_with('-') => {
+                if !words.is_empty() {
+                    query_done = true;
+                }
+
                 if let Ok(n) = opt[1..].parse::<usize>() {
                     query.limit = n;
+                } else {
+                    die!("unrecognized option \"{}\"", arg);
                 }
             }
 
-            _ => words.push(arg.as_str()),
+            _ => {
+                if query_done {
+                    die!("ambiguos message, it needs to be contiguous")
+                } else {
+                    words.push(arg.as_str())
+                }
+            }
         }
     }
 
