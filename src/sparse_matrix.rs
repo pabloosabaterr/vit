@@ -74,3 +74,55 @@ impl SparseMatrix {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn approx_eq(a: &[f64], b: &[f64]) {
+        assert_eq!(a.len(), b.len(), "length mismatch");
+        for (&x, &y) in a.iter().zip(b.iter()) {
+            assert!((x - y).abs() < 1e-10);
+        }
+    }
+
+    /*
+     * A simple 3x4 matrix:
+     *
+     *   [ 1.0  0.0  2.0  0.0 ]
+     *   [ 0.0  3.0  0.0  0.0 ]
+     *   [ 0.0  0.0  4.0  5.0 ]
+     */
+    fn make_3x4() -> SparseMatrix {
+        let mut triplets = vec![
+            (0, 0, 1.0),
+            (0, 2, 2.0),
+            (1, 1, 3.0),
+            (2, 2, 4.0),
+            (2, 3, 5.0),
+        ];
+        SparseMatrix::from_triplets(3, 4, &mut triplets)
+    }
+
+    #[test]
+    fn mul_vec_basic() {
+        let m = make_3x4();
+        let x = vec![1.0, 2.0, 3.0, 4.0];
+        let mut y = vec![0.0; 3];
+
+        m.mul_vec(&x, &mut y);
+
+        approx_eq(&y, &[7.0, 6.0, 32.0]);
+    }
+
+    #[test]
+    fn mul_vec_t_basic() {
+        let m = make_3x4();
+        let x = vec![1.0, 2.0, 3.0];
+        let mut y = vec![0.0; 4];
+
+        m.mul_vec_t(&x, &mut y);
+
+        approx_eq(&y, &[1.0, 6.0, 14.0, 15.0]);
+    }
+}

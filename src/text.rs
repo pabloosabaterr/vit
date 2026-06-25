@@ -81,3 +81,41 @@ pub fn preprocess(message: &str, syn: &HashMap<String, String>) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn lowercase_and_get_stem() {
+        let res = preprocess("RunNiNg", &HashMap::new());
+        assert_eq!(res, "run");
+    }
+
+    #[test]
+    fn hyphens_become_spaces() {
+        let res = preprocess("compile-time", &HashMap::new());
+        assert_eq!(res, "compil tim");
+    }
+
+    #[test]
+    fn removes_punctuation() {
+        let res = preprocess("fix(parser): expresions!?", &HashMap::new());
+        assert_eq!(res, "fixpars expres");
+    }
+
+    #[test]
+    fn stopwords_get_removed() {
+        let res =
+            preprocess("fix the bug in the assembly generation", &HashMap::new());
+        assert_eq!(res, "fix bug assembl generat");
+    }
+
+    #[test]
+    fn synonims_get_replaced() {
+        let mut synonyms = HashMap::new();
+        synonyms.insert("redo".to_string(), "refactor".to_string());
+        let res = preprocess("redo the whole lexer phase", &synonyms);
+        assert_eq!(res, "refactor whol lexer phas");
+    }
+}
