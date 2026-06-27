@@ -2,26 +2,21 @@ mod help;
 mod map;
 mod near;
 
-use std::collections::HashMap;
-
 pub use help::help;
 pub use map::map;
 pub use near::near;
 
-use vit::config::Context;
-use vit::lsa::{self, LsaStats};
+use vit::commit::{CommitEntry, save_commits};
+use vit::lsa::LsaStats;
 use vit::word_map::WordMap;
-use vit::{git, text};
 
-fn build_index(
-    commits: &[git::Commit],
-    ctx: &Context,
-    syn: &HashMap<String, String>,
-) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
-    let messages: Vec<String> = commits
-        .iter()
-        .map(|c| text::preprocess(&c.message, syn))
-        .collect();
-
-    lsa::build(&messages, ctx)
+fn save_index(
+    wordmap: &WordMap,
+    entries: &[CommitEntry],
+    stats: &LsaStats,
+) -> vit::error::Result<()> {
+    wordmap.save()?;
+    save_commits(entries, wordmap.dims())?;
+    stats.save()?;
+    Ok(())
 }

@@ -1,10 +1,10 @@
-use super::build_index;
+use super::save_index;
 
 use std::time::Instant;
-use vit::commit::{CommitEntry, load_commits, save_commits};
+use vit::commit::{CommitEntry, load_commits};
 use vit::config::Context;
 use vit::git;
-use vit::lsa::LsaStats;
+use vit::lsa::{LsaStats, build_index};
 use vit::text::{self, load_synonyms};
 use vit::vector::VectorInfo;
 use vit::word_map::WordMap;
@@ -110,9 +110,11 @@ pub fn near(ctx: &Context, args: &[String]) {
                 position: pos.clone(),
             })
             .collect();
-        wm.save().ok();
-        save_commits(&entries, wm.dims()).ok();
-        stats.save().ok();
+
+        if let Err(e) = save_index(&wm, &entries, &stats) {
+            eprintln!("failed to save index: {}", e);
+            return;
+        }
         (wm, entries, stats)
     } else {
         match (WordMap::load(), load_commits(), LsaStats::load()) {

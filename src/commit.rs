@@ -1,15 +1,23 @@
 use std::fs;
 
+use crate::read::Reader;
+
+const COMMIT_FILE: &'static str = ".vit/commits";
+
 pub struct CommitEntry {
     pub hash: String,
     pub message: String,
     pub position: Vec<f64>,
 }
 
-pub fn save_commits(commits: &[CommitEntry], dims: usize) -> std::io::Result<()> {
+pub fn save_commits(
+    commits: &[CommitEntry],
+    dims: usize,
+) -> crate::error::Result<()> {
     fs::create_dir_all(".vit")?;
     let mut buf: Vec<u8> = Vec::new();
 
+    crate::read::write_version(&mut buf, crate::VERSION);
     buf.extend(&(dims as u32).to_le_bytes());
     buf.extend(&(commits.len() as u32).to_le_bytes());
 
@@ -23,37 +31,30 @@ pub fn save_commits(commits: &[CommitEntry], dims: usize) -> std::io::Result<()>
         }
     }
 
-    fs::write(".vit/commits", buf)
+    Ok(fs::write(COMMIT_FILE, buf)?)
 }
 
-pub fn load_commits() -> std::io::Result<Vec<CommitEntry>> {
-    let buf = fs::read(".vit/commits")?;
-    let mut pos = 0;
+pub fn load_commits() -> crate::error::Result<Vec<CommitEntry>> {
+    let buf = fs::read(COMMIT_FILE)?;
+    let mut reader = Reader::new(&buf, "commit");
 
-    let dims = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-    pos += 4;
-    let count = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-    pos += 4;
+    reader.expect_version(crate::VERSION)?;
+
+    let dims = reader.read_u32()? as usize;
+    let count = reader.read_u32()? as usize;
 
     let mut commits = Vec::with_capacity(count);
 
     for _ in 0..count {
-        let hash_len =
-            u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-        pos += 4;
-        let hash = String::from_utf8(buf[pos..pos + hash_len].to_vec()).unwrap();
-        pos += hash_len;
+        let hash_len = reader.read_u32()? as usize;
+        let hash = reader.read_string(hash_len)?;
 
-        let msg_len =
-            u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-        pos += 4;
-        let message = String::from_utf8(buf[pos..pos + msg_len].to_vec()).unwrap();
-        pos += msg_len;
+        let msg_len = reader.read_u32()? as usize;
+        let message = reader.read_string(msg_len)?;
 
         let mut position = Vec::with_capacity(dims);
         for _ in 0..dims {
-            let val = f64::from_le_bytes(buf[pos..pos + 8].try_into().unwrap());
-            pos += 8;
+            let val = reader.read_f64()?;
             position.push(val);
         }
 

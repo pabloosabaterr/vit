@@ -13,7 +13,6 @@
  */
 
 use std::collections::HashMap;
-use std::io::Result;
 
 use crate::config::Context;
 use crate::lin_alg::power_iteration;
@@ -32,7 +31,7 @@ pub struct LsaStats {
 }
 
 impl LsaStats {
-    pub fn save(&self) -> Result<()> {
+    pub fn save(&self) -> crate::error::Result<()> {
         std::fs::create_dir_all(".vit")?;
         let content = [
             format!("word_count={}", self.word_count),
@@ -42,10 +41,10 @@ impl LsaStats {
             format!("sigma_last={}", self.sigma_last),
         ]
         .join("\n");
-        std::fs::write(".vit/stats", content)
+        Ok(std::fs::write(".vit/stats", content)?)
     }
 
-    pub fn load() -> std::io::Result<Self> {
+    pub fn load() -> crate::error::Result<Self> {
         let content = std::fs::read_to_string(".vit/stats")?;
         let mut stats = LsaStats::default();
         for line in content.lines() {
@@ -78,8 +77,13 @@ pub fn build(
     }
 
     /*
-     * Build vocabulary and weignts, Lsa builder should be agnostic about which
-     * agorithm is used.
+     * Build A (words x commit matrix)
+     *
+     * Build the vocabulary and computes BM25 weighted entries.
+     * Each column is a commit and each row is a word. A[word][commit] is how
+     * important is that word for that commit.
+     *
+     * A is the matrix to decompose in A = U * Sigma * V^t.
      */
     let term = match get_sparse_matrix(messages, min_freq) {
         Some(m) => m,
@@ -93,6 +97,16 @@ pub fn build(
     };
 
     let word_nr = term.vocab.len();
+
+    /*
+     * Extract U and Sigma via eigen value problem A * A^t * u = sigma^2 * u
+     *
+     * V is unitary so A * A^t cancels V, leaving: U * Sigma^2 * U^t. The eigen
+     * vectors of A * A^t are the columns of U and the eigen values the sigma^2.
+     *
+     * Power iteration finds the top-k eigen vectors by multiplying repeatedly random
+     * vectors by A * A^t.
+     */
     let (vectors, sigmas) = power_iteration(&term.matrix, dims);
     let real_dimensions = vectors.len();
 
@@ -104,6 +118,18 @@ pub fn build(
         sigma_last: sigmas[real_dimensions - 1],
     };
 
+    /*
+     * Power iteration returns an array per dimension. example:
+     *
+     *   vectors[0] = [a, b, c, d, e, ...] <- first dimension
+     *   vectors[1] = [f, g, h, i, j, ...] <- second dimension
+     *
+     * Here, flip this to be an array per word:
+     *
+     *   word[0] = [a, f]
+     *   word[1] = [b, g]
+     *   ...
+     */
     let mut coords = HashMap::with_capacity(word_nr);
     let mut weight_map = HashMap::with_capacity(word_nr);
 
@@ -113,6 +139,19 @@ pub fn build(
         weight_map.insert(word.clone(), term.weights[i]);
     }
 
+    /*
+     * Get each commit position, we already have the word coords and we use them to
+     * calculate the commits positions:
+     *
+     * A commit is a group of words, to place them in each dimension we need to sum
+     * each word's weight by times its score in each dimension.
+     *
+     * Following the comment above example, a commit with word 0 and 1 where its
+     * local score are 1.5 and 2 respectively would be:
+     *
+     *  position in first dim = a * 1.5 + b * 2 = x
+     *  position in second dim = f * 1.5 + g * 2 = y
+     */
     let commit_nr = messages.len();
     let mut commit_positions: Vec<Vec<f64>> =
         vec![vec![0.0; real_dimensions]; commit_nr];
@@ -130,4 +169,17 @@ pub fn build(
         commit_positions,
         stats,
     )
+}
+
+pub fn build_index(
+    commits: &[crate::git::Commit],
+    ctx: &crate::config::Context,
+    syn: &HashMap<String, String>,
+) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
+    let messages: Vec<String> = commits
+        .iter()
+        .map(|c| crate::text::preprocess(&c.message, syn))
+        .collect();
+
+    build(&messages, ctx)
 }

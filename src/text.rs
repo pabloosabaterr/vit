@@ -12,6 +12,8 @@
 use std::collections::HashMap;
 
 use crate::stemmer;
+use std::collections::HashSet;
+use std::sync::LazyLock;
 
 const STOPWORDS: &[&str] = &[
     "a", "an", "and", "are", "as", "at", "be", "but", "by", "do", "for", "from",
@@ -22,8 +24,11 @@ const STOPWORDS: &[&str] = &[
     "will", "with", "would", "you", "your",
 ];
 
+static STOPWORD_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| STOPWORDS.iter().copied().collect());
+
 fn is_stopword(word: &str) -> bool {
-    STOPWORDS.iter().any(|&s| s == word)
+    STOPWORD_SET.contains(word)
 }
 
 pub fn load_synonyms() -> HashMap<String, String> {

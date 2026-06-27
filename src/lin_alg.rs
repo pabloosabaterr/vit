@@ -53,8 +53,8 @@ pub fn power_iteration(
     let mut buffer = vec![0.0; n];
     let mut new_vector = vec![0.0; m];
 
-    for vector in 0..vector_nr {
-        let mut vector = init_vector(m, vector);
+    for dim_idx in 0..vector_nr {
+        let mut vector = init_vector(m, dim_idx);
 
         for _ in 0..MAX_CONVERGENCE_ITERATIONS {
             /*

@@ -1,6 +1,6 @@
 mod cmd;
 
-use vit::config::Context;
+use vit::{config::Context, die};
 
 /*
  * Vit is a search engine for Git.
@@ -21,11 +21,10 @@ fn main() {
         Some("help") | Some("--help") | Some("-h") => cmd::help(&args[1..]),
         Some("near") => cmd::near(&ctx, &args[1..]),
         Some("--version") | Some("-V") => {
-            println!("vit {}", env!("CARGO_PKG_VERSION"));
+            let v = vit::VERSION;
+            println!("vit {}.{}.{}.{}", v[0], v[1], v[2], v[3]);
         }
-        Some(other) => {
-            eprintln!("unknown command: {}", other);
-        }
+        Some(other) => die!("unknown command: {}", other),
         None => cmd::help(&args[1..]),
     }
 }

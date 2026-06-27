@@ -4,8 +4,6 @@ use crate::word_map::WordMap;
 
 pub struct VectorInfo {
     pub coords: Vec<f64>,
-    #[allow(unused)]
-    pub z: u64,
 }
 
 impl VectorInfo {
@@ -16,7 +14,6 @@ impl VectorInfo {
         if tokens.is_empty() {
             return VectorInfo {
                 coords: vec![0.0; dims],
-                z: 0,
             };
         }
 
@@ -45,7 +42,7 @@ impl VectorInfo {
             }
         }
 
-        VectorInfo { coords: acc, z: 0 }
+        VectorInfo { coords: acc }
     }
 
     pub fn dist(&self, other: &VectorInfo) -> f64 {
@@ -55,10 +52,6 @@ impl VectorInfo {
             .map(|(a, b)| (a - b).powi(2))
             .sum::<f64>()
             .sqrt()
-    }
-
-    pub fn to_vec(&self) -> Vec<f64> {
-        self.coords.clone()
     }
 
     pub fn cosine_vec(&self, other: &[f64]) -> f64 {

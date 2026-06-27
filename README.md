@@ -16,13 +16,20 @@ something similar, even with different words.
 
 ## How it works
 
-Vit reads your commit messages, builds a TF-IDF matrix of word
-co-occurrences, and extracts semantic dimensions via truncated SVD.
-Words that appear in similar contexts get similar coordinates.
-A commit's position is the weighted center of its words.
+Vit reads your commit messages and builds a BM25-weighted matrix where
+rows are words and columns are commits. Then it extracts the most
+meaningful semantic dimensions via truncated SVD. Words that show up
+in similar contexts end up with similar coordinates.
 
-No external services, no API keys, no network requests. Everything
-runs locally on your machine, also deterministic and no LLM behind.
+Each commit gets a position by weighting its words' coordinates by their
+BM25 scores in that commit.
+
+When you search, your query goes through the same process and Vit ranks
+commits by cosine similarity, how close their direction is to yours in
+that space.
+
+No external services, no API keys, no network requests. Everything runs
+locally on your machine, deterministic and no LLM behind.
 
 ## Usage
 
@@ -63,9 +70,9 @@ $ cd your-repo && vit map
   mapped 81294 commits, 12372 words, 111 dims
 
 $ vit near "fix authentication bug"
-  a1b2c3d   0.42  auth: fix token refresh on expired sessions
-  d4e5f6a   0.58  login: handle invalid credentials gracefully
   b7c8d9e   0.71  auth: session cookie not set on redirect
+  d4e5f6a   0.58  login: handle invalid credentials gracefully
+  a1b2c3d   0.42  auth: fix token refresh on expired sessions
 ```
 
 ## Name

@@ -1,4 +1,6 @@
-use std::{collections::HashMap, fs, io::Result};
+use std::{collections::HashMap, fs, usize};
+
+use crate::read::Reader;
 
 /*
  * N-dimensional word embeddings derived from LSA.
@@ -41,13 +43,16 @@ impl WordMap {
     ) -> Self {
         Self { coords, idf, dims }
     }
+
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<f64>)> {
         self.coords.iter()
     }
 
-    pub fn save(&self) -> Result<()> {
+    pub fn save(&self) -> crate::error::Result<()> {
         fs::create_dir_all(".vit")?;
         let mut buf: Vec<u8> = Vec::new();
+
+        crate::read::write_version(&mut buf, crate::VERSION);
 
         buf.extend(&(self.dims() as u32).to_le_bytes());
         buf.extend(&(self.len() as u32).to_le_bytes());
@@ -64,39 +69,30 @@ impl WordMap {
             }
         }
 
-        fs::write(".vit/wordmap", buf)
+        Ok(fs::write(".vit/wordmap", buf)?)
     }
 
-    pub fn load() -> Result<WordMap> {
+    pub fn load() -> crate::error::Result<WordMap> {
         let buf = fs::read(".vit/wordmap")?;
-        let mut pos = 0;
+        let mut reader = Reader::new(&buf, "word-map");
 
-        let dims =
-            u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-        pos += 4;
+        reader.expect_version(crate::VERSION)?;
+        let dims = reader.read_u32()? as usize;
 
-        let word_count =
-            u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-        pos += 4;
+        let word_count = reader.read_u32()? as usize;
 
         let mut coords = HashMap::with_capacity(word_count);
         let mut idf_map = HashMap::with_capacity(word_count);
 
         for _ in 0..word_count {
-            let word_len =
-                u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-            pos += 4;
+            let word_len = reader.read_u32()? as usize;
 
-            let word = String::from_utf8(buf[pos..pos + word_len].to_vec()).unwrap();
-            pos += word_len;
-
-            let idf = f64::from_le_bytes(buf[pos..pos + 8].try_into().unwrap());
-            pos += 8;
+            let word = reader.read_string(word_len)?;
+            let idf = reader.read_f64()?;
 
             let mut vec = Vec::with_capacity(dims);
             for _ in 0..dims {
-                let val = f64::from_le_bytes(buf[pos..pos + 8].try_into().unwrap());
-                pos += 8;
+                let val = reader.read_f64()?;
                 vec.push(val);
             }
 

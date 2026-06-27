@@ -1,9 +1,9 @@
-use super::build_index;
+use super::save_index;
 use std::time::Instant;
 use vit::commit::CommitEntry;
-use vit::commit::save_commits;
 use vit::config::Context;
 use vit::git;
+use vit::lsa::build_index;
 use vit::text::load_synonyms;
 use vit::{die, verbose};
 
@@ -35,6 +35,7 @@ pub fn map(ctx: &Context, args: &[String]) {
         return;
     }
 
+    let git_time = t_git.elapsed();
     let t_build = Instant::now();
     let synonyms = load_synonyms();
     let (wordmap, positions, stats) = build_index(&commits, ctx, &synonyms);
@@ -55,16 +56,9 @@ pub fn map(ctx: &Context, args: &[String]) {
         })
         .collect();
 
-    if let Err(_) = wordmap.save() {
-        eprintln!("failed to save wordmap");
+    if let Err(e) = save_index(&wordmap, &entries, &stats) {
+        eprintln!("failed to save index: {}", e);
         return;
-    }
-    if let Err(_) = save_commits(&entries, wordmap.dims()) {
-        eprintln!("failed to save commits");
-        return;
-    }
-    if let Err(_) = stats.save() {
-        eprintln!("failed to save stats")
     }
 
     if list {
@@ -88,7 +82,7 @@ pub fn map(ctx: &Context, args: &[String]) {
         stats.sigma_first,
         stats.sigma_last
     );
-    verbose!(verbose, "  git log     {:.2?}", t_git.elapsed());
+    verbose!(verbose, "  git log     {:.2?}", git_time);
     verbose!(verbose, "  lsa build   {:.2?}", build_time);
     verbose!(verbose, "");
 

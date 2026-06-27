@@ -17,8 +17,10 @@ pub struct TermData {
 use crate::sparse_matrix::SparseMatrix;
 
 /*
- * Build the vocabulary excluding the words that does not add any correlation value
- * (they only appear once in a commit).
+ * Build the vocabulary. This words are the rows of A matrix.
+ *
+ * Words that appear less than min_freq are exluded, exluding words loses precision
+ * but gains performance as the vocabulary (rows) gets reduced.
  *
  * Sends also the frequencies after computing them so build_tfidf doesn't have to
  * build them again.
@@ -49,45 +51,26 @@ fn build_vocab(
 
     /*
      * TODO:
-     * The magic number 100 is just a very vague guess of what is the minimum context
-     * needed where we can afford loosing words (excluding the ones that only appear
-     * once in a commit) without loosing too much precision.
+     * There should be an amount of context where we can afford loosing words
+     * (for example: excluding the ones that only appear once in a commit) without
+     * loosing too much precision.
      *
-     * Benchmarks with minimum freq:
+     * Benchmarks with minimum freq being 1:
      *
      * - Git 84891 commits
-     * map                    3237ms  +14%
-     * near                     24ms  +4%
+     *   map                    3237ms
+     *   near                     24ms
      *
      * - Rust 335294 commits
-     * map                   12953ms  +37%
-     * near                     85ms  +10%
+     *   map                   12953ms
+     *   near                     85ms
      *
      * - Vit 52 commits
-     * map                      16ms  +6%
-     * near                      7ms  0%
-     *
-     * As it can be been having a min_freq of 2 reduces the performance very
-     * significantly thus it is important to determine the threshold.
+     *   map                      16ms
+     *   near                      7ms
      */
-    let min_freq = match min_freq {
-        0 => {
-            if messages.len() < 100 {
-                1
-            } else {
-                2
-            }
-        }
-        n => n,
-    };
+    let min_freq = if min_freq <= 0 { 1 } else { min_freq };
 
-    /*
-     * Iterate over the raw frequencies and exclude the ones that appear less than
-     * the minimum required.
-     *
-     * The minimum required is two because a word that only appears once cannot
-     * correlate with other commits.
-     */
     for (word, &freq) in &raw_frequency {
         if freq < min_freq {
             continue;
@@ -128,9 +111,7 @@ fn get_idf(word_freq: &[usize], doc_nr: usize) -> Vec<f64> {
 }
 
 /*
- * Build a wordsxcommits matrix weighted by:
- *
- *   term-frequency - inverse-document-frequency
+ * Build a words x commits matrix weighted by BM25.
  *
  * Each entry measures how important that word is to a specific commit.
  * Note that a commit is a document and a term is a word.
