@@ -1,6 +1,6 @@
 mod cmd;
 
-use vit::{config::Context, die};
+use vit::{die, preference::{Preferences}};
 
 /*
  * Vit is a search engine for Git.
@@ -13,13 +13,14 @@ use vit::{config::Context, die};
  * <3
  */
 fn main() {
-    let ctx = Context::load();
+    let mut ctx = Preferences::load();
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     match args.first().map(|s| s.as_str()) {
         Some("map") => cmd::map(&ctx, &args[1..]),
         Some("help") | Some("--help") | Some("-h") => cmd::help(&args[1..]),
         Some("near") => cmd::near(&ctx, &args[1..]),
+        Some("config") => cmd::config(&mut ctx, &args[1..]),
         Some("--version") | Some("-V") => {
             let v = vit::VERSION;
             println!("vit {}.{}.{}.{}", v[0], v[1], v[2], v[3]);

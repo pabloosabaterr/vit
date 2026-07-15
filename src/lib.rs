@@ -1,5 +1,5 @@
 pub mod commit;
-pub mod config;
+pub mod preference;
 pub mod error;
 pub mod git;
 pub(crate) mod lin_alg;
@@ -43,5 +43,5 @@ pub const VERSION: [u8; 4] = [
     env!("CARGO_PKG_VERSION_MAJOR").as_bytes()[0] - b'0',
     env!("CARGO_PKG_VERSION_MINOR").as_bytes()[0] - b'0',
     env!("CARGO_PKG_VERSION_PATCH").as_bytes()[0] - b'0',
-    26,
+    52,
 ];

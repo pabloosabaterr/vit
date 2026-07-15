@@ -2,7 +2,7 @@ use super::save_index;
 
 use std::time::Instant;
 use vit::commit::{CommitEntry, load_commits};
-use vit::config::Context;
+use vit::preference::{Preferences};
 use vit::git;
 use vit::lsa::{LsaStats, build_index};
 use vit::text::{self, load_synonyms};
@@ -82,7 +82,7 @@ fn near_parse_args(args: &[String]) -> Option<NearQuery> {
     Some(query)
 }
 
-pub fn near(ctx: &Context, args: &[String]) {
+pub fn near(ctx: &Preferences, args: &[String]) {
     let query = match near_parse_args(args) {
         Some(q) => q,
         None => {

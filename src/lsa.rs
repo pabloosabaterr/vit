@@ -15,7 +15,7 @@
 
 use std::collections::HashMap;
 
-use crate::config::Context;
+use crate::preference::{Preferences};
 use crate::lin_alg::truncated_svd;
 use crate::term::get_sparse_matrix;
 use crate::word_map::WordMap;
@@ -78,9 +78,9 @@ fn empty_result(dims: usize) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
 
 pub fn build(
     messages: &[String],
-    ctx: &Context,
+    ctx: &Preferences,
 ) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
-    let &Context { dims, min_freq } = ctx;
+    let &Preferences { dims, min_freq, ..} = ctx;
 
     if messages.len() < 2 {
         return empty_result(dims);
@@ -191,7 +191,7 @@ pub fn build(
 
 pub fn build_index(
     commits: &[crate::git::Commit],
-    ctx: &crate::config::Context,
+    ctx: &crate::preference::Preferences,
     syn: &HashMap<String, String>,
 ) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
     let messages: Vec<String> = commits

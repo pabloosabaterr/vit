@@ -28,10 +28,20 @@ commands:
   help [command]   show help for a command
   -V, --version    vit's version";
 
+const CONFIG_HELP: &str = "\
+usage: vit config <cfg> <value>
+
+Set a value for a config variable in '.vitrc' file.
+
+\x1b[33m#NEEDSWORK\x1b[0m: Rewrites the whole '.vitrc' file loosing comments in the
+proccess.
+";
+
 pub fn help(args: &[String]) {
     let text = match args.first().map(|s| s.as_str()) {
         Some("map") => MAP_HELP,
         Some("near") => NEAR_HELP,
+        Some("config") => CONFIG_HELP,
         _ => GENERAL_HELP,
     };
     eprintln!("{}", text);

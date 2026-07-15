@@ -1,7 +1,7 @@
 use super::save_index;
 use std::time::Instant;
 use vit::commit::CommitEntry;
-use vit::config::Context;
+use vit::preference::{Preferences};
 use vit::git;
 use vit::lsa::build_index;
 use vit::text::load_synonyms;
@@ -25,7 +25,7 @@ fn map_parse_args(args: &[String]) -> MapFlags {
     flags
 }
 
-pub fn map(ctx: &Context, args: &[String]) {
+pub fn map(ctx: &Preferences, args: &[String]) {
     let MapFlags { verbose, list } = map_parse_args(args);
 
     let t_git = Instant::now();

@@ -1,10 +1,12 @@
 mod help;
 mod map;
 mod near;
+mod config;
 
 pub use help::help;
 pub use map::map;
 pub use near::near;
+pub use config::config;
 
 use vit::commit::{CommitEntry, save_commits};
 use vit::lsa::LsaStats;
