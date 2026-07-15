@@ -189,8 +189,8 @@ fn jacobi_eigen(mut t: Vec<Vec<f64>>) -> EigenDecomposition {
     let n = t.len();
 
     let mut rotations = vec![vec![0.0; n]; n];
-    for i in 0..n {
-        rotations[i][i] = 1.0;
+    for (i, row) in rotations.iter_mut().enumerate().take(n) {
+        row[i] = 1.0;
     }
 
     for _ in 0..JACOBI_MAX_ROTATIONS {
@@ -198,10 +198,10 @@ fn jacobi_eigen(mut t: Vec<Vec<f64>>) -> EigenDecomposition {
         let mut q = 0;
         let mut max = 0.0;
 
-        for i in 0..n {
-            for j in (i + 1)..n {
-                if t[i][j].abs() > max {
-                    max = t[i][j].abs();
+        for (i, row) in t.iter().enumerate().take(n) {
+            for (j, val) in row.iter().enumerate().take(n).skip(i + 1) {
+                if val.abs() > max {
+                    max = val.abs();
                     p = i;
                     q = j;
                 }
@@ -222,22 +222,23 @@ fn jacobi_eigen(mut t: Vec<Vec<f64>>) -> EigenDecomposition {
         let cos = 1.0 / (tan * tan + 1.0).sqrt();
         let sin = tan * cos;
 
-        for i in 0..n {
-            let (a, b) = (t[i][p], t[i][q]);
-            t[i][p] = cos * a - sin * b;
-            t[i][q] = sin * a + cos * b;
+        for row in t.iter_mut().take(n) {
+            let (a, b) = (row[p], row[q]);
+            row[p] = cos * a - sin * b;
+            row[q] = sin * a + cos * b;
         }
 
-        for i in 0..n {
-            let (a, b) = (t[p][i], t[q][i]);
-            t[p][i] = cos * a - sin * b;
-            t[q][i] = sin * a + cos * b;
+        let (left, right) = t.split_at_mut(q);
+        for (a, b) in left[p].iter_mut().zip(right[0].iter_mut()) {
+            let (va, vb) = (*a, *b);
+            *a = cos * va - sin * vb;
+            *b = sin * va + cos * vb;
         }
 
-        for i in 0..n {
-            let (a, b) = (rotations[i][p], rotations[i][q]);
-            rotations[i][p] = cos * a - sin * b;
-            rotations[i][q] = sin * a + cos * b;
+        for row in rotations.iter_mut().take(n) {
+            let (a, b) = (row[p], row[q]);
+            row[p] = cos * a - sin * b;
+            row[q] = sin * a + cos * b;
         }
     }
 
@@ -296,9 +297,10 @@ fn rayleigh_ritz(
     /*
      * T is symmetric because A * A^t is, mirror the upper triangle.
      */
-    for i in 0..block_size {
-        for j in 0..i {
-            t[i][j] = t[j][i];
+    for i in 1..block_size {
+        let (upper, lower) = t.split_at_mut(i);
+        for (j, upper_row) in upper.iter().enumerate() {
+            lower[0][j] = upper_row[i];
         }
     }
 

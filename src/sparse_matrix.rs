@@ -13,7 +13,7 @@ impl SparseMatrix {
     pub fn from_triplets(
         rows: usize,
         cols: usize,
-        triplets: &mut Vec<(usize, usize, f64)>,
+        triplets: &mut [(usize, usize, f64)],
     ) -> Self {
         triplets.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
 

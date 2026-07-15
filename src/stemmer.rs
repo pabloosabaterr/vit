@@ -6,8 +6,6 @@
  * TODO: Add more languages
  */
 
-use std::usize;
-
 fn is_vowel(b: u8) -> bool {
     matches!(b, b'a' | b'e' | b'i' | b'o' | b'u' | b'y')
 }
@@ -105,11 +103,11 @@ fn is_short_word(word: &[u8], r1: usize) -> bool {
 }
 
 fn step_0(word: &mut Vec<u8>) {
-    if ends_with(&word, b"'s'") {
+    if ends_with(word, b"'s'") {
         word.truncate(word.len() - 3);
-    } else if ends_with(&word, b"'s") {
+    } else if ends_with(word, b"'s") {
         word.truncate(word.len() - 2);
-    } else if ends_with(&word, b"'") {
+    } else if ends_with(word, b"'") {
         word.truncate(word.len() - 1);
     }
 }
@@ -151,7 +149,7 @@ fn is_exception_post_1a(word: &[u8]) -> bool {
     )
 }
 
-fn mark_consonant_y(word: &mut Vec<u8>) {
+fn mark_consonant_y(word: &mut [u8]) {
     if word[0] == b'y' {
         word[0] = b'Y';
     }
@@ -162,7 +160,7 @@ fn mark_consonant_y(word: &mut Vec<u8>) {
     }
 }
 
-fn restore_y(word: &mut Vec<u8>) {
+fn restore_y(word: &mut [u8]) {
     for b in word.iter_mut() {
         if *b == b'Y' {
             *b = b'y';
@@ -171,11 +169,11 @@ fn restore_y(word: &mut Vec<u8>) {
 }
 
 fn step_1b(word: &mut Vec<u8>, r1: usize) {
-    if ends_with(&word, b"eedly") {
+    if ends_with(word, b"eedly") {
         if word.len() - 5 >= r1 {
             word.truncate(word.len() - 3); /* -> ee */
         }
-    } else if ends_with(&word, b"eed") {
+    } else if ends_with(word, b"eed") {
         if word.len() - 3 >= r1 {
             word.truncate(word.len() - 1); /* -> ee */
         }
@@ -183,7 +181,7 @@ fn step_1b(word: &mut Vec<u8>, r1: usize) {
         let mut found = false;
         let suffixes: &[&[u8]] = &[b"ingly", b"edly", b"ing", b"ed"];
         for &suf in suffixes {
-            if ends_with(&word, suf) {
+            if ends_with(word, suf) {
                 let preceding = &word[..word.len() - suf.len()];
                 if has_vowel(preceding) {
                     word.truncate(word.len() - suf.len());
@@ -193,21 +191,21 @@ fn step_1b(word: &mut Vec<u8>, r1: usize) {
             }
         }
         if found {
-            if ends_with(&word, b"at")
-                || ends_with(&word, b"bl")
-                || ends_with(&word, b"iz")
+            if ends_with(word, b"at")
+                || ends_with(word, b"bl")
+                || ends_with(word, b"iz")
             {
                 word.push(b'e');
-            } else if is_double(&word) {
+            } else if is_double(word) {
                 word.truncate(word.len() - 1);
-            } else if is_short_word(&word, compute_r1(&word)) {
+            } else if is_short_word(word, compute_r1(word)) {
                 word.push(b'e');
             }
         }
     }
 }
 
-fn step_1c(word: &mut Vec<u8>) {
+fn step_1c(word: &mut [u8]) {
     if word.len() > 2 {
         let last = word.len() - 1;
         if (word[last] == b'y' || word[last] == b'Y') && !is_vowel(word[last - 1]) {
@@ -245,7 +243,7 @@ fn step_2(word: &mut Vec<u8>, r1: usize) {
     ];
 
     for &(suf, rep, guard) in suffixes {
-        if ends_with(&word, suf) {
+        if ends_with(word, suf) {
             let cut = word.len() - suf.len();
             if cut >= r1 {
                 if suf == b"li" {
@@ -280,7 +278,7 @@ fn step_3(word: &mut Vec<u8>, r1: usize, r2: usize) {
         (b"ful", b"", false),
     ];
     for &(suf, rep, need_r2) in suffixes {
-        if ends_with(&word, suf) {
+        if ends_with(word, suf) {
             let cut = word.len() - suf.len();
             let region = if need_r2 { r2 } else { r1 };
             if cut >= region {
@@ -299,7 +297,7 @@ fn step_4(word: &mut Vec<u8>, r2: usize) {
     ];
 
     for &suf in suffixes {
-        if ends_with(&word, suf) {
+        if ends_with(word, suf) {
             let cut = word.len() - suf.len();
             if cut >= r2 {
                 if suf == b"ion" {
@@ -320,15 +318,15 @@ fn step_5(word: &mut Vec<u8>, r1: usize, r2: usize) {
     if let Some(&last) = word.last() {
         let n = word.len();
         if last == b'e' {
-            if n - 1 >= r2 {
+            if n > r2 {
                 word.truncate(n - 1);
-            } else if n - 1 >= r1 {
+            } else if n > r1 {
                 /* delete unless preceded by a short syllable */
-                if n >= 3 && !is_short_syllable(&word, n - 3) {
+                if n >= 3 && !is_short_syllable(word, n - 3) {
                     word.truncate(n - 1);
                 }
             }
-        } else if last == b'l' && n - 1 >= r2 && n >= 2 && word[n - 2] == b'l' {
+        } else if last == b'l' && n > r2 && n >= 2 && word[n - 2] == b'l' {
             word.truncate(n - 1);
         }
     }

@@ -50,7 +50,7 @@ pub fn read_commits(path: &str, limit: Option<usize>) -> Vec<Commit> {
 
     stdout
         .lines()
-        .filter_map(|line| parse_commit(line))
+        .filter_map(parse_commit)
         .collect()
 }
 

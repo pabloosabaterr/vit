@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, usize};
+use std::{collections::HashMap, fs};
 
 use crate::read::Reader;
 

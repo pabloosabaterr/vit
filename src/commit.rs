@@ -2,7 +2,7 @@ use std::fs;
 
 use crate::read::Reader;
 
-const COMMIT_FILE: &'static str = ".vit/commits";
+const COMMIT_FILE: &str = ".vit/commits";
 
 pub struct CommitEntry {
     pub hash: String,

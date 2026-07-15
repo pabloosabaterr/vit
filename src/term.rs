@@ -69,7 +69,7 @@ fn build_vocab(
      *   map                      16ms
      *   near                      7ms
      */
-    let min_freq = if min_freq <= 0 { 1 } else { min_freq };
+    let min_freq = if min_freq == 0 { 1 } else { min_freq };
 
     for (word, &freq) in &raw_frequency {
         if freq < min_freq {

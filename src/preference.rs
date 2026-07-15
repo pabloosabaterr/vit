@@ -38,7 +38,7 @@ impl Preferences {
             /*
              * On loading ignore unknonw settings.
              */
-            _ => return,
+            _ => (),
         }
     }
 

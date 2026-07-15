@@ -65,7 +65,6 @@ pub fn map(ctx: &Preferences, args: &[String]) {
         for c in &commits {
             println!("  {:.7}  {}", &c.hash[..7], c.message);
         }
-        eprintln!("");
     }
 
     verbose!(
