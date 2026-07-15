@@ -41,88 +41,57 @@ impl SparseMatrix {
     }
 
     /*
-     * y = A * x
-     */
-    pub fn mul_vec(&self, x: &[f64], y: &mut [f64]) {
-        for v in y.iter_mut() {
-            *v = 0.0;
-        }
-        for r in 0..self.rows {
-            let mut sum = 0.0;
-            for idx in self.row_ptr[r]..self.row_ptr[r + 1] {
-                sum += self.values[idx] * x[self.col_idx[idx]];
-            }
-            y[r] = sum;
-        }
-    }
-
-    /*
-     * y = A^t * x
-     */
-    pub fn mul_vec_t(&self, x: &[f64], y: &mut [f64]) {
-        for v in y.iter_mut() {
-            *v = 0.0;
-        }
-        for r in 0..self.rows {
-            let xr = x[r];
-            if xr == 0.0 {
-                continue;
-            }
-            for idx in self.row_ptr[r]..self.row_ptr[r + 1] {
-                y[self.col_idx[idx]] += self.values[idx] * xr;
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn approx_eq(a: &[f64], b: &[f64]) {
-        assert_eq!(a.len(), b.len(), "length mismatch");
-        for (&x, &y) in a.iter().zip(b.iter()) {
-            assert!((x - y).abs() < 1e-10);
-        }
-    }
-
-    /*
-     * A simple 3x4 matrix:
+     * Y = A * X
      *
-     *   [ 1.0  0.0  2.0  0.0 ]
-     *   [ 0.0  3.0  0.0  0.0 ]
-     *   [ 0.0  0.0  4.0  5.0 ]
+     * X and Y are dense blocks of k columns stored row-major: the k
+     * values of row r live at buf[r * k .. (r + 1) * k]. X is cols×k
+     * and Y is rows×k.
+     *
+     * A single pass over the sparse matrix feeds every column. The
+     * pass is memory bound so serving k columns instead of one is
+     * almost free, and that is what makes block iteration fast.
      */
-    fn make_3x4() -> SparseMatrix {
-        let mut triplets = vec![
-            (0, 0, 1.0),
-            (0, 2, 2.0),
-            (1, 1, 3.0),
-            (2, 2, 4.0),
-            (2, 3, 5.0),
-        ];
-        SparseMatrix::from_triplets(3, 4, &mut triplets)
+    pub fn mul_block(&self, x: &[f64], y: &mut [f64], k: usize) {
+        for v in y.iter_mut() {
+            *v = 0.0;
+        }
+
+        for r in 0..self.rows {
+            let row = &mut y[r * k..(r + 1) * k];
+
+            for idx in self.row_ptr[r]..self.row_ptr[r + 1] {
+                let val = self.values[idx];
+                let col = self.col_idx[idx];
+                let src = &x[col * k..(col + 1) * k];
+
+                for j in 0..k {
+                    row[j] += val * src[j];
+                }
+            }
+        }
     }
 
-    #[test]
-    fn mul_vec_basic() {
-        let m = make_3x4();
-        let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0; 3];
+    /*
+     * Y = A^t * X
+     *
+     * Same block layout as mul_block, X is rows×k and Y is cols×k.
+     */
+    pub fn mul_block_t(&self, x: &[f64], y: &mut [f64], k: usize) {
+        for v in y.iter_mut() {
+            *v = 0.0;
+        }
 
-        m.mul_vec(&x, &mut y);
+        for r in 0..self.rows {
+            let src = &x[r * k..(r + 1) * k];
 
-        approx_eq(&y, &[7.0, 6.0, 32.0]);
-    }
+            for idx in self.row_ptr[r]..self.row_ptr[r + 1] {
+                let val = self.values[idx];
+                let col = self.col_idx[idx];
 
-    #[test]
-    fn mul_vec_t_basic() {
-        let m = make_3x4();
-        let x = vec![1.0, 2.0, 3.0];
-        let mut y = vec![0.0; 4];
-
-        m.mul_vec_t(&x, &mut y);
-
-        approx_eq(&y, &[1.0, 6.0, 14.0, 15.0]);
+                for j in 0..k {
+                    y[col * k + j] += val * src[j];
+                }
+            }
+        }
     }
 }

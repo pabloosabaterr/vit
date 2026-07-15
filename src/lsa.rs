@@ -1,13 +1,14 @@
 /*
- * Latent Semantic Analysis via Power Iteration.
+ * Latent Semantic Analysis.
  *
  * Builds:
  *
  *   TF-IDF weighted term×document sparse matrix from preprocessed commit
  *   Note that docoment refers to commit and term to word.
  *
- * Extracts the top-k left singular vectors using power iteration on A*A^t
- * Words that co-occur across commits end up with similar coordinates.
+ * Extracts the top-k left singular vectors via truncated SVD (block
+ * subspace iteration, see lin_alg.rs). Words that co-occur across
+ * commits end up with similar coordinates.
  *
  * Uses 32 dimensions by defaults but the user can choose how many on .vitrc
  */
@@ -15,7 +16,7 @@
 use std::collections::HashMap;
 
 use crate::config::Context;
-use crate::lin_alg::power_iteration;
+use crate::lin_alg::truncated_svd;
 use crate::term::get_sparse_matrix;
 use crate::word_map::WordMap;
 
@@ -63,17 +64,26 @@ impl LsaStats {
     }
 }
 
+/*
+ * What build() returns when the corpus is too small or degenerate to
+ * extract anything meaningful from it.
+ */
+fn empty_result(dims: usize) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
+    (
+        WordMap::from_raw(HashMap::new(), HashMap::new(), dims),
+        Vec::new(),
+        LsaStats::default(),
+    )
+}
+
 pub fn build(
     messages: &[String],
     ctx: &Context,
 ) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
     let &Context { dims, min_freq } = ctx;
+
     if messages.len() < 2 {
-        return (
-            WordMap::from_raw(HashMap::new(), HashMap::new(), dims),
-            Vec::new(),
-            LsaStats::default(),
-        );
+        return empty_result(dims);
     }
 
     /*
@@ -87,13 +97,7 @@ pub fn build(
      */
     let term = match get_sparse_matrix(messages, min_freq) {
         Some(m) => m,
-        None => {
-            return (
-                WordMap::from_raw(HashMap::new(), HashMap::new(), dims),
-                Vec::new(),
-                LsaStats::default(),
-            );
-        }
+        None => return empty_result(dims),
     };
 
     let word_nr = term.vocab.len();
@@ -104,11 +108,19 @@ pub fn build(
      * V is unitary so A * A^t cancels V, leaving: U * Sigma^2 * U^t. The eigen
      * vectors of A * A^t are the columns of U and the eigen values the sigma^2.
      *
-     * Power iteration finds the top-k eigen vectors by multiplying repeatedly random
-     * vectors by A * A^t.
+     * truncated_svd finds the top-k of them by iterating a whole block of
+     * deterministic vectors against A * A^t, see lin_alg.rs.
      */
-    let (vectors, sigmas) = power_iteration(&term.matrix, dims);
+    let (vectors, sigmas) = truncated_svd(&term.matrix, dims);
     let real_dimensions = vectors.len();
+
+    /*
+     * Degenerate corpus (e.g. every message empty after preprocessing),
+     * nothing useful got extracted.
+     */
+    if real_dimensions == 0 {
+        return empty_result(dims);
+    }
 
     let stats = LsaStats {
         word_count: word_nr,
@@ -119,7 +131,7 @@ pub fn build(
     };
 
     /*
-     * Power iteration returns an array per dimension. example:
+     * truncated_svd returns an array per dimension. example:
      *
      *   vectors[0] = [a, b, c, d, e, ...] <- first dimension
      *   vectors[1] = [f, g, h, i, j, ...] <- second dimension
@@ -140,29 +152,35 @@ pub fn build(
     }
 
     /*
-     * Get each commit position, we already have the word coords and we use them to
-     * calculate the commits positions:
+     * Get each commit position, we already have the word coords and we use
+     * them to calculate the commits positions:
      *
-     * A commit is a group of words, to place them in each dimension we need to sum
-     * each word's weight by times its score in each dimension.
+     * A commit is a group of words, to place it in each dimension we sum
+     * each word's weight in the commit times its score in that dimension,
+     * which is A^t * u for every dimension at once.
      *
-     * Following the comment above example, a commit with word 0 and 1 where its
-     * local score are 1.5 and 2 respectively would be:
-     *
-     *  position in first dim = a * 1.5 + b * 2 = x
-     *  position in second dim = f * 1.5 + g * 2 = y
+     * mul_block_t computes all dimensions in a single matrix pass. Its
+     * output is row-major, so the k coordinates of commit j come out
+     * already contiguous at positions[j * k .. (j + 1) * k], which is
+     * exactly the per-commit shape we want.
      */
-    let commit_nr = messages.len();
-    let mut commit_positions: Vec<Vec<f64>> =
-        vec![vec![0.0; real_dimensions]; commit_nr];
-    let mut column = vec![0.0; commit_nr];
+    let k = real_dimensions;
+    let mut word_block = vec![0.0; word_nr * k];
 
-    for d in 0..real_dimensions {
-        term.matrix.mul_vec_t(&vectors[d], &mut column);
-        for j in 0..commit_nr {
-            commit_positions[j][d] = column[j];
+    for (d, vector) in vectors.iter().enumerate() {
+        for (r, &val) in vector.iter().enumerate() {
+            word_block[r * k + d] = val;
         }
     }
+
+    let commit_nr = messages.len();
+    let mut position_block = vec![0.0; commit_nr * k];
+    term.matrix.mul_block_t(&word_block, &mut position_block, k);
+
+    let commit_positions: Vec<Vec<f64>> = position_block
+        .chunks_exact(k)
+        .map(|row| row.to_vec())
+        .collect();
 
     (
         WordMap::from_raw(coords, weight_map, real_dimensions),
@@ -183,3 +201,4 @@ pub fn build_index(
 
     build(&messages, ctx)
 }
+
