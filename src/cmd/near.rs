@@ -2,9 +2,9 @@ use super::save_index;
 
 use std::time::Instant;
 use vit::commit::{CommitEntry, load_commits};
-use vit::preference::{Preferences};
 use vit::git;
 use vit::lsa::{LsaStats, build_index};
+use vit::preference::Preferences;
 use vit::text::{self, load_synonyms};
 use vit::vector::VectorInfo;
 use vit::word_map::WordMap;
@@ -95,11 +95,10 @@ pub fn near(ctx: &Preferences, args: &[String]) {
     let synonyms = load_synonyms();
     let t_build = Instant::now();
     let (wordmap, entries, stats) = if map {
-        let commits = git::read_commits(".", None);
-        if commits.is_empty() {
-            eprintln!("no commits found");
-            return;
-        }
+        let Ok(commits) = git::read_commits(".", None) else {
+            die!("no commits found");
+        };
+
         let (wm, positions, stats) = build_index(&commits, ctx, &synonyms);
         let entries: Vec<CommitEntry> = commits
             .iter()
@@ -112,8 +111,7 @@ pub fn near(ctx: &Preferences, args: &[String]) {
             .collect();
 
         if let Err(e) = save_index(&wm, &entries, &stats) {
-            eprintln!("failed to save index: {}", e);
-            return;
+            die!("failed to save index: {}", e);
         }
         (wm, entries, stats)
     } else {
@@ -123,16 +121,14 @@ pub fn near(ctx: &Preferences, args: &[String]) {
                 (wm, entries, stats)
             }
             _ => {
-                eprintln!("no index found, run 'vit map' first");
-                return;
+                die!("no index found, run 'vit map' first");
             }
         }
     };
     let build_time = t_build.elapsed();
 
     if wordmap.is_empty() {
-        eprintln!("not enough data for LSA");
-        return;
+        die!("not enough data for LSA");
     }
 
     let t_search = Instant::now();

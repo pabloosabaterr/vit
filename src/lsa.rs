@@ -15,8 +15,8 @@
 
 use std::collections::HashMap;
 
-use crate::preference::{Preferences};
 use crate::lin_alg::truncated_svd;
+use crate::preference::Preferences;
 use crate::term::get_sparse_matrix;
 use crate::word_map::WordMap;
 
@@ -80,7 +80,7 @@ pub fn build(
     messages: &[String],
     ctx: &Preferences,
 ) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
-    let &Preferences { dims, min_freq, ..} = ctx;
+    let &Preferences { dims, min_freq, .. } = ctx;
 
     if messages.len() < 2 {
         return empty_result(dims);
@@ -201,4 +201,3 @@ pub fn build_index(
 
     build(&messages, ctx)
 }
-

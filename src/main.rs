@@ -1,6 +1,6 @@
 mod cmd;
 
-use vit::{die, preference::{Preferences}};
+use vit::{die, preference::Preferences};
 
 /*
  * Vit is a search engine for Git.

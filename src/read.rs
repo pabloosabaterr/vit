@@ -14,10 +14,10 @@ impl<'a> Reader<'a> {
     pub fn read_bytes(&mut self, n: usize) -> crate::error::Result<&'a [u8]> {
         let end = self.pos + n;
         if end > self.buf.len() {
-            return Err(VitError::CorruptIndex {
-                file: "commits",
-                detail: format!("unexpected end at byte {}", self.pos),
-            });
+            return Err(VitError(format!(
+                "corrupt {}: unexpected end at byte {}",
+                self.file, self.pos
+            )));
         }
         let slice = &self.buf[self.pos..end];
         self.pos = end;
@@ -36,10 +36,8 @@ impl<'a> Reader<'a> {
 
     pub fn read_string(&mut self, len: usize) -> crate::error::Result<String> {
         let bytes = self.read_bytes(len)?;
-        String::from_utf8(bytes.to_vec()).map_err(|_| VitError::CorruptIndex {
-            file: self.file,
-            detail: "invalid utf-8".into(),
-        })
+        String::from_utf8(bytes.to_vec())
+            .map_err(|_| VitError(format!("corrupt {}: invalid utf-8", self.file)))
     }
 
     pub(crate) fn expect_version(
@@ -48,13 +46,10 @@ impl<'a> Reader<'a> {
     ) -> crate::error::Result<()> {
         let bytes = self.read_bytes(4)?;
         if bytes[0] != expected[0] || bytes[1] != expected[1] {
-            return Err(VitError::CorruptIndex {
-                file: self.file,
-                detail: format!(
-                    "version {}.{}.{}.{}, expected {}.{}.x.x",
-                    bytes[0], bytes[1], bytes[2], bytes[3], expected[0], expected[1],
-                ),
-            });
+            return Err(VitError(format!(
+                "corrupt {}: version mismatch",
+                self.file
+            )));
         }
         Ok(())
     }

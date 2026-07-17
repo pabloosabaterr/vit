@@ -1,5 +1,5 @@
-use crate::lsa;
 use crate::die;
+use crate::lsa;
 
 pub const PREFERENCES_SET_DIMS: u32 = 1 << 0;
 pub const PREFERENCES_SET_MIN_FREQ: u32 = 1 << 1;

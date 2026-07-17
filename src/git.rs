@@ -10,6 +10,8 @@
 
 use std::process::Command;
 
+use crate::error::VitError;
+
 pub struct Commit {
     pub hash: String,
     #[allow(unused)]
@@ -27,7 +29,10 @@ pub struct Commit {
  *
  * Returns commits in reverse chronological order (newest first).
  */
-pub fn read_commits(path: &str, limit: Option<usize>) -> Vec<Commit> {
+pub fn read_commits(
+    path: &str,
+    limit: Option<usize>,
+) -> crate::error::Result<Vec<Commit>> {
     let mut cmd = Command::new("git");
     cmd.arg("-C")
         .arg(path)
@@ -40,18 +45,15 @@ pub fn read_commits(path: &str, limit: Option<usize>) -> Vec<Commit> {
 
     let output = match cmd.output() {
         Ok(o) if o.status.success() => o,
-        _ => return Vec::new(),
+        _ => return Err(VitError("failed to run git log".into())),
     };
 
     let stdout = match String::from_utf8(output.stdout) {
         Ok(s) => s,
-        Err(_) => return Vec::new(),
+        Err(_) => return Err(VitError("invalid utf-8".into())),
     };
 
-    stdout
-        .lines()
-        .filter_map(parse_commit)
-        .collect()
+    Ok(stdout.lines().filter_map(parse_commit).collect())
 }
 
 fn parse_commit(line: &str) -> Option<Commit> {

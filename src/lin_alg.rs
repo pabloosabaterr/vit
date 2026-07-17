@@ -394,4 +394,3 @@ pub fn truncated_svd(
 
     rayleigh_ritz(importance_matrix, &q, block_size, dims)
 }
-

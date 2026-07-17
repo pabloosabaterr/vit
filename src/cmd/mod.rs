@@ -1,17 +1,17 @@
+mod config;
 mod help;
 mod map;
 mod near;
-mod config;
 
+pub use config::config;
 pub use help::help;
 pub use map::map;
 pub use near::near;
-pub use config::config;
 
-use vit::{RESET, YELLOW};
 use vit::commit::{CommitEntry, save_commits};
 use vit::lsa::LsaStats;
 use vit::word_map::WordMap;
+use vit::{RESET, YELLOW};
 
 fn save_index(
     wordmap: &WordMap,

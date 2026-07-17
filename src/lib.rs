@@ -1,9 +1,9 @@
 pub mod commit;
-pub mod preference;
 pub mod error;
 pub mod git;
 pub(crate) mod lin_alg;
 pub mod lsa;
+pub mod preference;
 pub(crate) mod read;
 pub(crate) mod sparse_matrix;
 pub(crate) mod stemmer;

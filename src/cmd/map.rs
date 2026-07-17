@@ -3,9 +3,9 @@ use crate::cmd::dims_hint;
 use super::save_index;
 use std::time::Instant;
 use vit::commit::CommitEntry;
-use vit::preference::{Preferences};
 use vit::git;
 use vit::lsa::build_index;
+use vit::preference::Preferences;
 use vit::text::load_synonyms;
 use vit::{die, verbose};
 
@@ -31,11 +31,9 @@ pub fn map(ctx: &Preferences, args: &[String]) {
     let MapFlags { verbose, list } = map_parse_args(args);
 
     let t_git = Instant::now();
-    let commits = git::read_commits(".", None);
-    if commits.is_empty() {
-        eprintln!("no commits found");
-        return;
-    }
+    let Ok(commits) = git::read_commits(".", None) else {
+        die!("no commits found.");
+    };
 
     let git_time = t_git.elapsed();
     let t_build = Instant::now();
