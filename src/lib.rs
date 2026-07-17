@@ -29,6 +29,9 @@ macro_rules! die {
     }};
 }
 
+pub const YELLOW: &str = "\x1b[33m";
+pub const RESET: &str = "\x1b[0m";
+
 /*
  * Version format: a.b.c.d
  *

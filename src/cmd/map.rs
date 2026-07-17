@@ -1,3 +1,5 @@
+use crate::cmd::dims_hint;
+
 use super::save_index;
 use std::time::Instant;
 use vit::commit::CommitEntry;
@@ -60,6 +62,8 @@ pub fn map(ctx: &Preferences, args: &[String]) {
         eprintln!("failed to save index: {}", e);
         return;
     }
+
+    dims_hint(&stats, ctx.dims);
 
     if list {
         for c in &commits {
