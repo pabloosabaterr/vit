@@ -27,8 +27,8 @@ pub struct LsaStats {
     pub word_count: usize,
     pub commit_count: usize,
     pub dimensions: usize,
-    pub sigma_first: f64,
-    pub sigma_last: f64,
+    pub sigma_first: f32,
+    pub sigma_last: f32,
 }
 
 impl LsaStats {
@@ -68,7 +68,7 @@ impl LsaStats {
  * What build() returns when the corpus is too small or degenerate to
  * extract anything meaningful from it.
  */
-fn empty_result(dims: usize) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
+fn empty_result(dims: usize) -> (WordMap, Vec<Vec<f32>>, LsaStats) {
     (
         WordMap::from_raw(HashMap::new(), HashMap::new(), dims),
         Vec::new(),
@@ -79,7 +79,7 @@ fn empty_result(dims: usize) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
 pub fn build(
     messages: &[String],
     ctx: &Preferences,
-) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
+) -> (WordMap, Vec<Vec<f32>>, LsaStats) {
     let &Preferences { dims, min_freq, .. } = ctx;
 
     if messages.len() < 2 {
@@ -146,7 +146,7 @@ pub fn build(
     let mut weight_map = HashMap::with_capacity(word_nr);
 
     for (i, word) in term.vocab.iter().enumerate() {
-        let v: Vec<f64> = (0..real_dimensions).map(|d| vectors[d][i]).collect();
+        let v: Vec<f32> = (0..real_dimensions).map(|d| vectors[d][i]).collect();
         coords.insert(word.clone(), v);
         weight_map.insert(word.clone(), term.weights[i]);
     }
@@ -177,7 +177,7 @@ pub fn build(
     let mut position_block = vec![0.0; commit_nr * k];
     term.matrix.mul_block_t(&word_block, &mut position_block, k);
 
-    let commit_positions: Vec<Vec<f64>> = position_block
+    let commit_positions: Vec<Vec<f32>> = position_block
         .chunks_exact(k)
         .map(|row| row.to_vec())
         .collect();
@@ -193,7 +193,7 @@ pub fn build_index(
     commits: &[crate::git::Commit],
     ctx: &crate::preference::Preferences,
     syn: &HashMap<String, String>,
-) -> (WordMap, Vec<Vec<f64>>, LsaStats) {
+) -> (WordMap, Vec<Vec<f32>>, LsaStats) {
     let messages: Vec<String> = commits
         .iter()
         .map(|c| crate::text::preprocess(&c.message, syn))

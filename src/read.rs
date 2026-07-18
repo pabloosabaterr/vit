@@ -29,9 +29,9 @@ impl<'a> Reader<'a> {
         Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
     }
 
-    pub fn read_f64(&mut self) -> crate::error::Result<f64> {
-        let bytes = self.read_bytes(8)?;
-        Ok(f64::from_le_bytes(bytes.try_into().unwrap()))
+    pub fn read_f32(&mut self) -> crate::error::Result<f32> {
+        let bytes = self.read_bytes(4)?;
+        Ok(f32::from_le_bytes(bytes.try_into().unwrap()))
     }
 
     pub fn read_string(&mut self, len: usize) -> crate::error::Result<String> {

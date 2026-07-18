@@ -10,7 +10,7 @@ const MAX_BLOCK_ITERATIONS: usize = 14;
  * Stop iterating when every tracked sigma^2 estimate changes less than this
  * (relative) between rounds.
  */
-const CONVERGENCE_THRESHOLD: f64 = 1e-3;
+const CONVERGENCE_THRESHOLD: f32 = 1e-3;
 
 /*
  * Extra throwaway columns added to the block. They keep the singular
@@ -26,13 +26,13 @@ const OVERSAMPLE: usize = 8;
  * is a safety net, a block sized matrix needs far fewer.
  */
 const JACOBI_MAX_ROTATIONS: usize = 10_000;
-const JACOBI_EPS: f64 = 1e-12;
+const JACOBI_EPS: f32 = 1e-6;
 
-fn norm(v: &[f64]) -> f64 {
-    v.iter().map(|x| x * x).sum::<f64>().sqrt()
+fn norm(v: &[f32]) -> f32 {
+    v.iter().map(|x| x * x).sum::<f32>().sqrt()
 }
 
-fn normalize(v: &mut [f64]) {
+fn normalize(v: &mut [f32]) {
     let n = norm(v);
 
     if n > 0.0 {
@@ -42,15 +42,15 @@ fn normalize(v: &mut [f64]) {
     }
 }
 
-fn init_vector(size: usize, dim: usize) -> Vec<f64> {
-    let phi = (1.0 + 5.0_f64.sqrt()) / 2.0;
+fn init_vector(size: usize, dim: usize) -> Vec<f32> {
+    let phi = (1.0 + 5.0_f32.sqrt()) / 2.0;
 
     /*
      * These magic numbers are just because.
      */
     let offset = dim * 997 + 7;
-    let mut vector: Vec<f64> = (0..size)
-        .map(|i| ((i + offset) as f64 * phi).fract() - 0.5)
+    let mut vector: Vec<f32> = (0..size)
+        .map(|i| ((i + offset) as f32 * phi).fract() - 0.5)
         .collect();
 
     normalize(&mut vector);
@@ -62,7 +62,7 @@ fn init_vector(size: usize, dim: usize) -> Vec<f64> {
  * q[r * block_size .. (r + 1) * block_size]. Column j of the block is
  * the j-th candidate singular vector.
  */
-fn init_block(rows: usize, block_size: usize) -> Vec<f64> {
+fn init_block(rows: usize, block_size: usize) -> Vec<f32> {
     let mut q = vec![0.0; rows * block_size];
 
     for j in 0..block_size {
@@ -75,7 +75,7 @@ fn init_block(rows: usize, block_size: usize) -> Vec<f64> {
     q
 }
 
-fn col_dot(q: &[f64], block_size: usize, i: usize, j: usize) -> f64 {
+fn col_dot(q: &[f32], block_size: usize, i: usize, j: usize) -> f32 {
     q.chunks_exact(block_size).map(|row| row[i] * row[j]).sum()
 }
 
@@ -85,7 +85,7 @@ fn col_dot(q: &[f64], block_size: usize, i: usize, j: usize) -> f64 {
  * If a column collapses (it was linearly dependent on the previous
  * ones) it gets reseeded deterministically and projected again.
  */
-fn orthonormalize(q: &mut [f64], block_size: usize) {
+fn orthonormalize(q: &mut [f32], block_size: usize) {
     let rows = q.len() / block_size;
 
     for j in 0..block_size {
@@ -143,7 +143,7 @@ fn orthonormalize(q: &mut [f64], block_size: usize) {
  * the per-column values jump around but the sorted list is stable,
  * which is what the convergence check needs.
  */
-fn ritz_values(q: &[f64], z: &[f64], block_size: usize) -> Vec<f64> {
+fn ritz_values(q: &[f32], z: &[f32], block_size: usize) -> Vec<f32> {
     let mut rq = vec![0.0; block_size];
 
     let row_pairs = q.chunks_exact(block_size).zip(z.chunks_exact(block_size));
@@ -161,7 +161,7 @@ fn ritz_values(q: &[f64], z: &[f64], block_size: usize) -> Vec<f64> {
  * Only the first tracked values need to settle, the oversampled ones are
  * allowed to keep moving.
  */
-fn ritz_converged(rq: &[f64], prev: &[f64], tracked: usize) -> bool {
+fn ritz_converged(rq: &[f32], prev: &[f32], tracked: usize) -> bool {
     rq.iter()
         .zip(prev.iter())
         .take(tracked)
@@ -172,8 +172,8 @@ struct EigenDecomposition {
     /*
      * Sorted biggest first, values[k] pairs with vectors[k].
      */
-    values: Vec<f64>,
-    vectors: Vec<Vec<f64>>,
+    values: Vec<f32>,
+    vectors: Vec<Vec<f32>>,
 }
 
 /*
@@ -185,7 +185,7 @@ struct EigenDecomposition {
  *
  * p and q are the standard names for the pivot indices in Jacobi.
  */
-fn jacobi_eigen(mut t: Vec<Vec<f64>>) -> EigenDecomposition {
+fn jacobi_eigen(mut t: Vec<Vec<f32>>) -> EigenDecomposition {
     let n = t.len();
 
     let mut rotations = vec![vec![0.0; n]; n];
@@ -247,13 +247,13 @@ fn jacobi_eigen(mut t: Vec<Vec<f64>>) -> EigenDecomposition {
      * matching column of the accumulated rotations) and sort the pairs
      * together, biggest first: they can never get mismatched.
      */
-    let mut pairs: Vec<(f64, Vec<f64>)> = (0..n)
+    let mut pairs: Vec<(f32, Vec<f32>)> = (0..n)
         .map(|k| (t[k][k], (0..n).map(|i| rotations[i][k]).collect()))
         .collect();
 
     pairs.sort_by(|a, b| b.0.total_cmp(&a.0));
 
-    let (values, vectors): (Vec<f64>, Vec<Vec<f64>>) = pairs.into_iter().unzip();
+    let (values, vectors): (Vec<f32>, Vec<Vec<f32>>) = pairs.into_iter().unzip();
 
     EigenDecomposition { values, vectors }
 }
@@ -270,10 +270,10 @@ fn jacobi_eigen(mut t: Vec<Vec<f64>>) -> EigenDecomposition {
  */
 fn rayleigh_ritz(
     matrix: &SparseMatrix,
-    q: &[f64],
+    q: &[f32],
     block_size: usize,
     dims: usize,
-) -> (Vec<Vec<f64>>, Vec<f64>) {
+) -> (Vec<Vec<f32>>, Vec<f32>) {
     let rows = matrix.rows;
     let cols = matrix.cols;
 
@@ -311,8 +311,8 @@ fn rayleigh_ritz(
      * dimensions and drop the oversampled ones.
      */
     let keep = dims.min(block_size);
-    let mut vectors: Vec<Vec<f64>> = Vec::with_capacity(keep);
-    let mut sigmas: Vec<f64> = Vec::with_capacity(keep);
+    let mut vectors: Vec<Vec<f32>> = Vec::with_capacity(keep);
+    let mut sigmas: Vec<f32> = Vec::with_capacity(keep);
 
     for col in 0..keep {
         let lambda = eig.values[col];
@@ -341,7 +341,7 @@ fn rayleigh_ritz(
 pub fn truncated_svd(
     importance_matrix: &SparseMatrix,
     dims: usize,
-) -> (Vec<Vec<f64>>, Vec<f64>) {
+) -> (Vec<Vec<f32>>, Vec<f32>) {
     let rows = importance_matrix.rows;
     let cols = importance_matrix.cols;
 

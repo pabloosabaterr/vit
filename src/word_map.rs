@@ -10,17 +10,17 @@ use crate::read::Reader;
  * near each other.
  */
 pub struct WordMap {
-    coords: HashMap<String, Vec<f64>>,
+    coords: HashMap<String, Vec<f32>>,
     dims: usize,
-    idf: HashMap<String, f64>,
+    idf: HashMap<String, f32>,
 }
 
 impl WordMap {
-    pub fn get(&self, word: &str) -> Option<&Vec<f64>> {
+    pub fn get(&self, word: &str) -> Option<&Vec<f32>> {
         self.coords.get(word)
     }
 
-    pub fn idf(&self, word: &str) -> Option<f64> {
+    pub fn idf(&self, word: &str) -> Option<f32> {
         self.idf.get(word).copied()
     }
 
@@ -37,14 +37,14 @@ impl WordMap {
     }
 
     pub fn from_raw(
-        coords: HashMap<String, Vec<f64>>,
-        idf: HashMap<String, f64>,
+        coords: HashMap<String, Vec<f32>>,
+        idf: HashMap<String, f32>,
         dims: usize,
     ) -> Self {
         Self { coords, idf, dims }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<f64>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<f32>)> {
         self.coords.iter()
     }
 
@@ -88,11 +88,11 @@ impl WordMap {
             let word_len = reader.read_u32()? as usize;
 
             let word = reader.read_string(word_len)?;
-            let idf = reader.read_f64()?;
+            let idf = reader.read_f32()?;
 
             let mut vec = Vec::with_capacity(dims);
             for _ in 0..dims {
-                let val = reader.read_f64()?;
+                let val = reader.read_f32()?;
                 vec.push(val);
             }
 

@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 pub struct TermData {
     pub matrix: SparseMatrix,
     pub vocab: Vec<String>,
-    pub weights: Vec<f64>,
+    pub weights: Vec<f32>,
 }
 
 use crate::sparse_matrix::SparseMatrix;
@@ -95,16 +95,16 @@ fn build_vocab(
  * They both use the standar values for this constant a study about them would be be
  * nice though.
  */
-const BM25_K: f64 = 1.2;
-const BM25_B: f64 = 0.75;
+const BM25_K: f32 = 1.2;
+const BM25_B: f32 = 0.75;
 
-fn get_idf(word_freq: &[usize], doc_nr: usize) -> Vec<f64> {
-    let doc_nr = doc_nr as f64;
+fn get_idf(word_freq: &[usize], doc_nr: usize) -> Vec<f32> {
+    let doc_nr = doc_nr as f32;
 
     word_freq
         .iter()
         .map(|&freq| {
-            let df = freq as f64;
+            let df = freq as f32;
             ((doc_nr - df + 0.5) / (df + 0.5) + 1.0).ln()
         })
         .collect()
@@ -120,16 +120,16 @@ fn build_matrix(
     messages: &[String],
     words: &HashMap<String, usize>,
     word_nr: usize,
-    idf: &[f64],
+    idf: &[f32],
 ) -> SparseMatrix {
     let doc_nr = messages.len();
-    let mut triplets: Vec<(usize, usize, f64)> = Vec::new();
+    let mut triplets: Vec<(usize, usize, f32)> = Vec::new();
 
-    let avg_commit_len: f64 = messages
+    let avg_commit_len: f32 = messages
         .iter()
-        .map(|m| m.split_whitespace().count() as f64)
-        .sum::<f64>()
-        / doc_nr as f64;
+        .map(|m| m.split_whitespace().count() as f32)
+        .sum::<f32>()
+        / doc_nr as f32;
 
     for (doc, msg) in messages.iter().enumerate() {
         let tokens: Vec<&str> = msg.split_whitespace().collect();
@@ -138,7 +138,7 @@ fn build_matrix(
             continue;
         }
 
-        let commit_len = tokens.len() as f64;
+        let commit_len = tokens.len() as f32;
 
         /*
          * term frequency within this commit.
@@ -159,7 +159,7 @@ fn build_matrix(
              *       matters, it would be more relevant if we care about the commit
              *       bodies as well.
              */
-            let term_freq = count as f64;
+            let term_freq = count as f32;
             let norm_tf = (term_freq * (BM25_K + 1.0))
                 / (term_freq
                     + BM25_K

@@ -7,7 +7,7 @@ const COMMIT_FILE: &str = ".vit/commits";
 pub struct CommitEntry {
     pub hash: String,
     pub message: String,
-    pub position: Vec<f64>,
+    pub position: Vec<f32>,
 }
 
 pub fn save_commits(
@@ -54,7 +54,7 @@ pub fn load_commits() -> crate::error::Result<Vec<CommitEntry>> {
 
         let mut position = Vec::with_capacity(dims);
         for _ in 0..dims {
-            let val = reader.read_f64()?;
+            let val = reader.read_f32()?;
             position.push(val);
         }
 

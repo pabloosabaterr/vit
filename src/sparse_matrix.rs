@@ -6,14 +6,14 @@ pub struct SparseMatrix {
     pub cols: usize,
     row_ptr: Vec<usize>,
     col_idx: Vec<usize>,
-    values: Vec<f64>,
+    values: Vec<f32>,
 }
 
 impl SparseMatrix {
     pub fn from_triplets(
         rows: usize,
         cols: usize,
-        triplets: &mut [(usize, usize, f64)],
+        triplets: &mut [(usize, usize, f32)],
     ) -> Self {
         triplets.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
 
@@ -51,7 +51,7 @@ impl SparseMatrix {
      * pass is memory bound so serving k columns instead of one is
      * almost free, and that is what makes block iteration fast.
      */
-    pub fn mul_block(&self, x: &[f64], y: &mut [f64], k: usize) {
+    pub fn mul_block(&self, x: &[f32], y: &mut [f32], k: usize) {
         for v in y.iter_mut() {
             *v = 0.0;
         }
@@ -76,7 +76,7 @@ impl SparseMatrix {
      *
      * Same block layout as mul_block, X is rows×k and Y is cols×k.
      */
-    pub fn mul_block_t(&self, x: &[f64], y: &mut [f64], k: usize) {
+    pub fn mul_block_t(&self, x: &[f32], y: &mut [f32], k: usize) {
         for v in y.iter_mut() {
             *v = 0.0;
         }

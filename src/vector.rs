@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::word_map::WordMap;
 
 pub struct VectorInfo {
-    pub coords: Vec<f64>,
+    pub coords: Vec<f32>,
 }
 
 impl VectorInfo {
@@ -22,7 +22,7 @@ impl VectorInfo {
             *counts.entry(w).or_insert(0) += 1;
         }
 
-        let total = tokens.len() as f64;
+        let total = tokens.len() as f32;
         let mut acc = vec![0.0; dims];
 
         for (&word, &count) in &counts {
@@ -35,7 +35,7 @@ impl VectorInfo {
                 None => continue,
             };
 
-            let weight = (count as f64 / total) * idf;
+            let weight = (count as f32 / total) * idf;
 
             for (j, &val) in wv.iter().enumerate() {
                 acc[j] += weight * val;
@@ -45,24 +45,24 @@ impl VectorInfo {
         VectorInfo { coords: acc }
     }
 
-    pub fn dist(&self, other: &VectorInfo) -> f64 {
+    pub fn dist(&self, other: &VectorInfo) -> f32 {
         self.coords
             .iter()
             .zip(other.coords.iter())
             .map(|(a, b)| (a - b).powi(2))
-            .sum::<f64>()
+            .sum::<f32>()
             .sqrt()
     }
 
-    pub fn cosine_vec(&self, other: &[f64]) -> f64 {
-        let dot: f64 = self
+    pub fn cosine_vec(&self, other: &[f32]) -> f32 {
+        let dot: f32 = self
             .coords
             .iter()
             .zip(other.iter())
             .map(|(a, b)| a * b)
             .sum();
-        let na: f64 = self.coords.iter().map(|x| x * x).sum::<f64>().sqrt();
-        let nb: f64 = other.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let na: f32 = self.coords.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let nb: f32 = other.iter().map(|x| x * x).sum::<f32>().sqrt();
         if na == 0.0 || nb == 0.0 {
             0.0
         } else {
